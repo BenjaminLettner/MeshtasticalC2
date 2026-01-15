@@ -125,7 +125,7 @@ class MiniC2:
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
             self._send_text(ack, destination_id=destination_id)
 
-            time.sleep(0.5)
+            time.sleep(3.0)
 
             result = self._run_command(command)
             self.logger.info("Command result for %s: exit=%s", cmd_id, result[2])
