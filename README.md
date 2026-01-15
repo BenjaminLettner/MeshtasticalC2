@@ -4,12 +4,6 @@ Minimal Meshtastic-based C2 service that executes incoming text commands and sen
 
 ## Requirements
 - Meshtastic device on the host (`/dev/ttyACM0` by default)
-- Docker & Docker Compose on the target machine (optional)
-
-## Run (Docker)
-```bash
-docker compose up -d --build
-```
 
 ## Run (Python directly)
 ```bash
@@ -28,12 +22,13 @@ python app/minic2.py --port /dev/ttyACM1 --channel-index 1 --timeout 60
 
 ## Web UI (Mac)
 ```bash
+MINIC2_WEBUI_PORT=5050 \
 MINIC2_CLIENT_PORT=/dev/cu.usbmodem1101 \
 MINIC2_CLIENT_CHANNEL=1 \
 MINIC2_CLIENT_TIMEOUT=60 \
 python webui/app.py
 ```
-Open http://localhost:5000
+Open http://localhost:5050
 
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
