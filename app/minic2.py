@@ -58,6 +58,12 @@ class MiniC2:
         except Exception as exc:
             self.logger.exception("Send failed: %s", exc)
 
+    def _send_text_repeated(self, text: str, repeats: int = 2, delay: float = 0.6) -> None:
+        for attempt in range(repeats):
+            self._send_text(text)
+            if attempt < repeats - 1:
+                time.sleep(delay)
+
     def _on_receive(self, packet, interface) -> None:
         decoded = packet.get("decoded", {})
         if decoded.get("portnum") != "TEXT_MESSAGE_APP":
@@ -112,7 +118,7 @@ class MiniC2:
                 return
 
             first_chunk = chunks.popleft()
-            self._send_text(first_chunk)
+            self._send_text_repeated(first_chunk)
             if chunks:
                 self.output_buffer.store(cmd_id, chunks)
 
