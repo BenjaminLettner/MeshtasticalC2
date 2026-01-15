@@ -16,6 +16,8 @@ CHANNEL = int(os.getenv("MINIC2_CLIENT_CHANNEL", "1"))
 TIMEOUT = int(os.getenv("MINIC2_CLIENT_TIMEOUT", "60"))
 MORE_DELAY = int(os.getenv("MINIC2_CLIENT_MORE_DELAY", "3"))
 WAIT_CONFIG = os.getenv("MINIC2_CLIENT_WAIT_CONFIG", "false").lower() == "true"
+WEBUI_HOST = os.getenv("MINIC2_WEBUI_HOST", "0.0.0.0")
+WEBUI_PORT = int(os.getenv("MINIC2_WEBUI_PORT", "5000"))
 
 COMMAND_LOCK = threading.Lock()
 
@@ -134,4 +136,4 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host=WEBUI_HOST, port=WEBUI_PORT, debug=False)
