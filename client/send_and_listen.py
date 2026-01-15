@@ -38,8 +38,14 @@ def main() -> int:
     args = parse_args()
     listener = Listener()
     pub.subscribe(listener.on_receive, "meshtastic.receive")
+    pub.subscribe(listener.on_receive, "meshtastic.receive.text")
 
+    print(f"[client] connecting to {args.port}...", flush=True)
     interface = meshtastic.serial_interface.SerialInterface(args.port)
+    wait_for_config = getattr(interface, "waitForConfig", None)
+    if callable(wait_for_config):
+        wait_for_config()
+    print(f"[client] sending: {args.command}", flush=True)
     interface.sendText(args.command, channelIndex=args.channel)
 
     deadline = time.monotonic() + args.timeout
@@ -64,7 +70,9 @@ def main() -> int:
             last_cmd_id = first_line.replace("MSG-ID:", "").strip()
         if "Output:" in text:
             output_seen = True
-
+    if not output_seen:
+        print(f"[client] timeout after {args.timeout}s; no Output received", flush=True)
+    interface.close()
     return 0 if output_seen else 1
 
 
