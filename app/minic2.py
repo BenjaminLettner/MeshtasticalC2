@@ -51,16 +51,25 @@ class MiniC2:
 
         pub.subscribe(self._on_receive, "meshtastic.receive")
 
-    def _send_text(self, text: str) -> None:
+    def _send_text(self, text: str, destination_id: Optional[str] = None) -> None:
         try:
-            self.interface.sendText(text, channelIndex=self.channel_index)
+            if destination_id:
+                self.interface.sendText(text, destinationId=destination_id, channelIndex=self.channel_index)
+            else:
+                self.interface.sendText(text, channelIndex=self.channel_index)
             self.logger.info("Sent: %s", text.replace("\n", " | "))
         except Exception as exc:
             self.logger.exception("Send failed: %s", exc)
 
-    def _send_text_repeated(self, text: str, repeats: int = 3, delay: float = 1.0) -> None:
+    def _send_text_repeated(
+        self,
+        text: str,
+        destination_id: Optional[str] = None,
+        repeats: int = 3,
+        delay: float = 1.0,
+    ) -> None:
         for attempt in range(repeats):
-            self._send_text(text)
+            self._send_text(text, destination_id=destination_id)
             if attempt < repeats - 1:
                 time.sleep(delay)
 
@@ -88,24 +97,30 @@ class MiniC2:
 
         if text.startswith("more "):
             cmd_id = text.split(" ", 1)[1].strip()
-            self._handle_more(cmd_id)
+            destination_id = packet.get("fromId")
+            self._handle_more(cmd_id, destination_id)
             return
 
         self.logger.info("Received command: %s", text)
-        threading.Thread(target=self._execute_and_respond, args=(text,), daemon=True).start()
+        destination_id = packet.get("fromId")
+        threading.Thread(
+            target=self._execute_and_respond,
+            args=(text, destination_id),
+            daemon=True,
+        ).start()
 
-    def _handle_more(self, cmd_id: str) -> None:
+    def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
         chunk = self.output_buffer.pop_next(cmd_id)
         if not chunk:
-            self._send_text(f"MSG-ID:{cmd_id}\nNo more output")
+            self._send_text(f"MSG-ID:{cmd_id}\nNo more output", destination_id=destination_id)
             return
-        self._send_text(chunk)
+        self._send_text(chunk, destination_id=destination_id)
 
-    def _execute_and_respond(self, command: str) -> None:
+    def _execute_and_respond(self, command: str, destination_id: Optional[str]) -> None:
         with self._command_lock:
             cmd_id = str(int(time.time() * 1000))
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
-            self._send_text(ack)
+            self._send_text(ack, destination_id=destination_id)
 
             time.sleep(0.5)
 
@@ -114,11 +129,11 @@ class MiniC2:
             chunks = self._format_output(cmd_id, result)
 
             if not chunks:
-                self._send_text(f"MSG-ID:{cmd_id}\nOutput:\n<no output>")
+                self._send_text(f"MSG-ID:{cmd_id}\nOutput:\n<no output>", destination_id=destination_id)
                 return
 
             first_chunk = chunks.popleft()
-            self._send_text_repeated(first_chunk)
+            self._send_text_repeated(first_chunk, destination_id=destination_id)
             if chunks:
                 self.output_buffer.store(cmd_id, chunks)
 
