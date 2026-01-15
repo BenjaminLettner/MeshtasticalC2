@@ -5,7 +5,7 @@ services:
     environment:
       MINIC2_PORT: /dev/ttyACM1
       MINIC2_CHANNEL: 1
-      MINIC2_TIMEOUT: 20
+      MINIC2_TIMEOUT: 60
     devices:
       - /dev/ttyACM1:/dev/ttyACM1
     restart: unless-stopped
