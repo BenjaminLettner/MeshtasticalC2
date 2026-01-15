@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import os
 import socket
 import subprocess
@@ -43,6 +44,7 @@ class MiniC2:
         self.channel_index = channel_index
         self.timeout = timeout
         self.host = socket.gethostname()
+        self.logger = logging.getLogger("minic2")
         self.interface = meshtastic.serial_interface.SerialInterface(self.port)
         self.output_buffer = OutputBuffer()
         self._command_lock = threading.Lock()
@@ -50,7 +52,11 @@ class MiniC2:
         pub.subscribe(self._on_receive, "meshtastic.receive")
 
     def _send_text(self, text: str) -> None:
-        self.interface.sendText(text, channelIndex=self.channel_index)
+        try:
+            self.interface.sendText(text, channelIndex=self.channel_index)
+            self.logger.info("Sent: %s", text.replace("\n", " | "))
+        except Exception as exc:
+            self.logger.exception("Send failed: %s", exc)
 
     def _on_receive(self, packet, interface) -> None:
         decoded = packet.get("decoded", {})
@@ -79,6 +85,7 @@ class MiniC2:
             self._handle_more(cmd_id)
             return
 
+        self.logger.info("Received command: %s", text)
         threading.Thread(target=self._execute_and_respond, args=(text,), daemon=True).start()
 
     def _handle_more(self, cmd_id: str) -> None:
@@ -94,7 +101,10 @@ class MiniC2:
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
             self._send_text(ack)
 
+            time.sleep(0.5)
+
             result = self._run_command(command)
+            self.logger.info("Command result for %s: exit=%s", cmd_id, result[2])
             chunks = self._format_output(cmd_id, result)
 
             if not chunks:
@@ -176,8 +186,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     c2 = MiniC2(args.port, args.channel_index, args.timeout)
-    print(f"MiniC2 running on {args.port} channel {args.channel_index}")
+    logging.getLogger("minic2").info("MiniC2 running on %s channel %s", args.port, args.channel_index)
     c2.run()
 
 
