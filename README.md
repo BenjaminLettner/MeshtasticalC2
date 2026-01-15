@@ -26,6 +26,15 @@ python app/minic2.py --port /dev/ttyACM1 --channel-index 1 --timeout 60
 ./client/send_and_listen.sh --port /dev/cu.usbmodem1101 --timeout 45 whoami
 ```
 
+## Web UI (Mac)
+```bash
+MINIC2_CLIENT_PORT=/dev/cu.usbmodem1101 \
+MINIC2_CLIENT_CHANNEL=1 \
+MINIC2_CLIENT_TIMEOUT=60 \
+python webui/app.py
+```
+Open http://localhost:5000
+
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
 - Use `more <MSG-ID>` to fetch additional output.
