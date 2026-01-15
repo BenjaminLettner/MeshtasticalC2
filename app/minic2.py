@@ -58,7 +58,7 @@ class MiniC2:
         except Exception as exc:
             self.logger.exception("Send failed: %s", exc)
 
-    def _send_text_repeated(self, text: str, repeats: int = 2, delay: float = 0.6) -> None:
+    def _send_text_repeated(self, text: str, repeats: int = 3, delay: float = 1.0) -> None:
         for attempt in range(repeats):
             self._send_text(text)
             if attempt < repeats - 1:
