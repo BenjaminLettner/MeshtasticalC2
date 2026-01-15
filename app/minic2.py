@@ -67,11 +67,14 @@ class MiniC2:
         destination_id: Optional[str] = None,
         repeats: int = 3,
         delay: float = 1.0,
+        also_broadcast: bool = False,
     ) -> None:
         for attempt in range(repeats):
             self._send_text(text, destination_id=destination_id)
             if attempt < repeats - 1:
                 time.sleep(delay)
+        if also_broadcast:
+            self._send_text(text)
 
     def _on_receive(self, packet, interface) -> None:
         decoded = packet.get("decoded", {})
@@ -133,7 +136,7 @@ class MiniC2:
                 return
 
             first_chunk = chunks.popleft()
-            self._send_text_repeated(first_chunk, destination_id=destination_id)
+            self._send_text_repeated(first_chunk, destination_id=destination_id, also_broadcast=True)
             if chunks:
                 self.output_buffer.store(cmd_id, chunks)
 
