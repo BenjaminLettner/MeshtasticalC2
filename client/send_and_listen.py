@@ -28,9 +28,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MeshtasticalC2 client send+listen")
     parser.add_argument("--port", required=True)
     parser.add_argument("--channel", type=int, default=1)
-    parser.add_argument("--timeout", type=int, default=45)
+    parser.add_argument("--timeout", type=int, default=60)
     parser.add_argument("--command", required=True)
-    parser.add_argument("--more-delay", type=int, default=10)
+    parser.add_argument("--more-delay", type=int, default=3)
+    parser.add_argument("--wait-config", action="store_true")
     return parser.parse_args()
 
 
@@ -42,9 +43,10 @@ def main() -> int:
 
     print(f"[client] connecting to {args.port}...", flush=True)
     interface = meshtastic.serial_interface.SerialInterface(args.port)
-    wait_for_config = getattr(interface, "waitForConfig", None)
-    if callable(wait_for_config):
-        wait_for_config()
+    if args.wait_config:
+        wait_for_config = getattr(interface, "waitForConfig", None)
+        if callable(wait_for_config):
+            wait_for_config()
     print(f"[client] sending: {args.command}", flush=True)
     interface.sendText(args.command, channelIndex=args.channel)
 
