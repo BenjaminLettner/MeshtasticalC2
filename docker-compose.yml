@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  minic2:
+    build: .
+    environment:
+      MINIC2_PORT: /dev/ttyACM0
+      MINIC2_CHANNEL: 1
+      MINIC2_TIMEOUT: 20
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    restart: unless-stopped
