@@ -53,10 +53,15 @@ const renderHistory = (items) => {
     historyEl.innerHTML = '<div class="history-item">No history yet.</div>';
     return;
   }
-  items.forEach((item) => {
+  items.forEach((item, index) => {
     const div = document.createElement("div");
     div.className = "history-item";
-    div.innerHTML = `<strong>${item.command}</strong>${item.summary}`;
+    div.dataset.index = index;
+    div.innerHTML = `
+      <strong>${item.command}</strong>
+      <span class="history-summary">${item.summary}</span>
+      <button class="history-view" type="button">View</button>
+    `;
     historyEl.appendChild(div);
   });
 };
@@ -67,6 +72,12 @@ const addHistoryEntry = (entry) => {
   const trimmed = items.slice(0, 20);
   saveHistory(trimmed);
   renderHistory(trimmed);
+};
+
+const applyHistoryEntry = (entry) => {
+  renderOutput(entry.output || "<no output>");
+  renderRaw(entry.raw || []);
+  setStatus(`Loaded ${entry.command}`, "idle");
 };
 
 form.addEventListener("submit", async (event) => {
@@ -96,13 +107,16 @@ form.addEventListener("submit", async (event) => {
       throw new Error(data.error || "Request failed");
     }
 
-    renderOutput(data.output || "<no output>");
+    const outputText = data.output || "<no output>";
+    renderOutput(outputText);
     renderRaw(data.raw);
     const statusText = data.received ? `Done in ${data.duration}s` : "No output";
     setStatus(statusText, data.received ? "ok" : "warn");
     addHistoryEntry({
       command,
       summary: `${statusText} · ${new Date().toLocaleTimeString()}`,
+      output: outputText,
+      raw: data.raw || [],
     });
   } catch (error) {
     renderOutput("");
@@ -112,6 +126,8 @@ form.addEventListener("submit", async (event) => {
     addHistoryEntry({
       command,
       summary: `Error · ${message}`,
+      output: "",
+      raw: [],
     });
   }
 });
@@ -119,6 +135,19 @@ form.addEventListener("submit", async (event) => {
 setStatus("Idle", "idle");
 renderRaw([]);
 renderHistory(loadHistory());
+
+historyEl.addEventListener("click", (event) => {
+  const button = event.target.closest(".history-view");
+  if (!button) return;
+  const itemEl = button.closest(".history-item");
+  if (!itemEl) return;
+  const index = Number(itemEl.dataset.index);
+  const items = loadHistory();
+  const entry = items[index];
+  if (entry) {
+    applyHistoryEntry(entry);
+  }
+});
 
 const loadPorts = async () => {
   try {

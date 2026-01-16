@@ -271,12 +271,34 @@ h1 {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
 }
 
 .history-item strong {
   display: block;
   color: #ffb07a;
   margin-bottom: 6px;
+}
+
+.history-summary {
+  color: #d7dbe6;
+}
+
+.history-view {
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f5f7;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.history-view:hover {
+  border-color: rgba(255, 140, 66, 0.6);
+  box-shadow: 0 0 12px rgba(255, 140, 66, 0.2);
 }
 
 @keyframes spin {
