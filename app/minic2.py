@@ -106,7 +106,7 @@ class MiniC2:
         destination_id = packet.get("fromId")
         threading.Thread(
             target=self._execute_and_respond,
-            args=(text, destination_id),
+            args=(text, destination_id, time.monotonic()),
             daemon=True,
         ).start()
 
@@ -117,19 +117,37 @@ class MiniC2:
             return
         self._send_text(chunk, destination_id=destination_id)
 
-    def _execute_and_respond(self, command: str, destination_id: Optional[str]) -> None:
+    def _execute_and_respond(
+        self,
+        command: str,
+        destination_id: Optional[str],
+        received_at: float,
+    ) -> None:
         with self._command_lock:
             cmd_id = str(int(time.time() * 1000))
+            exec_start = time.monotonic()
             result = self._run_command(command)
-            self.logger.info("Command result for %s: exit=%s", cmd_id, result[2])
+            exec_done = time.monotonic()
+            self.logger.info(
+                "Command result for %s: exit=%s elapsed=%.3fs",
+                cmd_id,
+                result[2],
+                exec_done - exec_start,
+            )
             chunks = self._format_output(cmd_id, result)
+            total_elapsed = exec_done - received_at
+            timing_line = f"Timing: total={total_elapsed:.3f}s exec={exec_done - exec_start:.3f}s"
 
             if not chunks:
-                self._send_text(f"MSG-ID:{cmd_id}\nOutput:\n<no output>", destination_id=destination_id)
+                self._send_text(
+                    f"MSG-ID:{cmd_id}\nOutput:\n<no output>\n{timing_line}",
+                    destination_id=destination_id,
+                )
                 return
 
             if len(chunks) == 1:
                 first_chunk = chunks.popleft()
+                first_chunk = f"{first_chunk}\n{timing_line}"
                 self._send_text_repeated(first_chunk, destination_id=destination_id)
                 return
 
@@ -137,6 +155,7 @@ class MiniC2:
             self._send_text(ack, destination_id=destination_id)
             time.sleep(0.1)
             first_chunk = chunks.popleft()
+            first_chunk = f"{first_chunk}\n{timing_line}"
             self._send_text_repeated(first_chunk, destination_id=destination_id)
             self.output_buffer.store(cmd_id, chunks)
 
