@@ -46,6 +46,11 @@ def index() -> object:
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/config")
+def config() -> object:
+    return send_from_directory(app.static_folder, "config.html")
+
+
 @app.route("/api/ports", methods=["GET"])
 def list_serial_ports() -> object:
     ports = [port.device for port in list_ports.comports()]
@@ -62,9 +67,11 @@ def run_command() -> object:
 
     port = (payload.get("port") or "").strip()
     channel = payload.get("channel") if payload.get("channel") is not None else CHANNEL
+    timeout = payload.get("timeout") if payload.get("timeout") is not None else TIMEOUT
 
     try:
         channel = int(channel)
+        timeout = int(timeout)
     except ValueError:
         return jsonify({"error": "Invalid channel or timeout"}), 400
 
@@ -76,7 +83,7 @@ def run_command() -> object:
 
     try:
         with COMMAND_LOCK:
-            result = _send_and_listen(command, port=port, channel=channel, timeout=TIMEOUT)
+            result = _send_and_listen(command, port=port, channel=channel, timeout=timeout)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 503
 

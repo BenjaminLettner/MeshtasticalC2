@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MeshtasticalC2 Config</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="shell config-shell">
+      <header class="terminal-header">
+        <div>
+          <p class="eyebrow">Mesh C2 Config</p>
+          <h1>Configuration</h1>
+          <p class="subtitle">Set the active port, channel, and timeout for the WebCLI.</p>
+        </div>
+        <div class="header-actions">
+          <a class="nav-link" href="/">Console</a>
+        </div>
+      </header>
+
+      <section class="config-panel">
+        <form id="config-form" class="config-form">
+          <label>
+            Serial Device
+            <select id="config-port"></select>
+          </label>
+          <label>
+            Channel
+            <input id="config-channel" type="number" min="0" max="7" value="1" />
+          </label>
+          <label>
+            Timeout (seconds)
+            <input id="config-timeout" type="number" min="5" max="600" value="180" />
+          </label>
+
+          <div class="config-actions">
+            <button class="primary" type="submit">Save Config</button>
+            <button type="button" id="config-refresh-ports">Refresh Ports</button>
+            <button type="button" id="config-reset">Reset Defaults</button>
+          </div>
+          <div class="config-status" id="config-status">Stored locally in this browser.</div>
+        </form>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

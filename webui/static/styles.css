@@ -313,6 +313,245 @@ h1 {
   font-size: 0.8rem;
 }
 
+.terminal-shell {
+  max-width: 1200px;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--ink);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.nav-link:hover {
+  border-color: rgba(255, 140, 66, 0.6);
+  box-shadow: 0 0 14px rgba(255, 140, 66, 0.2);
+}
+
+.terminal-panel {
+  margin-top: 28px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: rgba(12, 14, 20, 0.7);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.terminal-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 140, 66, 0.08);
+  border: 1px solid rgba(255, 140, 66, 0.18);
+  font-family: "Source Code Pro", monospace;
+}
+
+.banner-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.banner-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.banner-help {
+  color: #ffd0a8;
+  font-size: 0.8rem;
+}
+
+.terminal-output {
+  min-height: 280px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: "Source Code Pro", monospace;
+  padding: 6px 2px;
+}
+
+.terminal-block {
+  background: rgba(15, 17, 24, 0.9);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.terminal-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffb07a;
+  font-size: 0.9rem;
+}
+
+.prompt {
+  color: #ff8c42;
+  font-weight: 600;
+}
+
+.command-text {
+  color: #f7e3d3;
+}
+
+.terminal-response {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.88rem;
+  color: #e7e9ef;
+}
+
+.terminal-response.ok {
+  color: #8ff1bd;
+}
+
+.terminal-response.warn {
+  color: #ffd28b;
+}
+
+.terminal-response.error {
+  color: #ff9c9c;
+}
+
+.terminal-response.pending {
+  color: #9aa0aa;
+}
+
+.terminal-meta-line {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.terminal-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 17, 24, 0.9);
+}
+
+.terminal-input input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-family: "Source Code Pro", monospace;
+}
+
+.terminal-input input:focus {
+  outline: none;
+}
+
+.terminal-input button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 140, 66, 0.4);
+  background: rgba(255, 140, 66, 0.2);
+  color: #ffcfaa;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.terminal-input button:hover {
+  background: rgba(255, 140, 66, 0.3);
+}
+
+.config-shell {
+  max-width: 900px;
+}
+
+.config-panel {
+  margin-top: 28px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(20, 22, 30, 0.85);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.config-form {
+  display: grid;
+  gap: 16px;
+}
+
+.config-form label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-form input,
+.config-form select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0f1118;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.config-actions button {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.config-actions button.primary {
+  background: rgba(255, 140, 66, 0.25);
+  border-color: rgba(255, 140, 66, 0.5);
+  color: #ffd7b3;
+}
+
+.config-status {
+  color: #ffd0a8;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 720px) {
   .command-row {
     flex-direction: column;

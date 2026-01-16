@@ -10,55 +10,50 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div class="shell">
-      <header class="header">
+    <div class="shell terminal-shell">
+      <header class="terminal-header">
         <div>
           <p class="eyebrow">Mesh C2 Console</p>
           <h1>MeshtasticalC2</h1>
-          <p class="subtitle">Send commands over LoRa and watch the response stream in real time.</p>
+          <p class="subtitle">A WebCLI for Meshtastic command and control.</p>
         </div>
-        <div class="status" id="status">
-          <span id="status-text">Idle</span>
-          <span class="spinner" id="spinner" aria-hidden="true"></span>
+        <div class="header-actions">
+          <div class="status" id="status">
+            <span id="status-text">Idle</span>
+            <span class="spinner" id="spinner" aria-hidden="true"></span>
+          </div>
+          <a class="nav-link" href="/config">Config</a>
         </div>
       </header>
 
-      <section class="panel">
-        <form id="command-form" class="command-form">
-          <label for="command">Command</label>
-          <div class="command-row">
-            <input
-              id="command"
-              name="command"
-              type="text"
-              placeholder="whoami"
-              autocomplete="off"
-              required
-            />
-            <button type="submit">Transmit</button>
+      <section class="terminal-panel">
+        <div class="terminal-banner">
+          <div>
+            <div class="banner-title">WebCLI</div>
+            <div class="banner-meta">
+              Port <span id="active-port">Auto</span> · Channel <span id="active-channel">1</span> · Timeout <span id="active-timeout">180</span>s
+            </div>
           </div>
-          <div class="options">
-            <label>
-              Serial Device
-              <div class="port-row">
-                <select id="port"></select>
-                <button type="button" id="refresh-ports">Refresh</button>
-              </div>
-              <span class="unit">Auto-selects if only one.</span>
-            </label>
-            <label>
-              Channel
-              <input id="channel" type="number" min="0" max="7" value="1" />
-            </label>
-          </div>
+          <div class="banner-help">Try: help, status, config, clear</div>
+        </div>
+
+        <div id="output" class="terminal-output" aria-live="polite"></div>
+
+        <form id="command-form" class="terminal-input">
+          <span class="prompt">mesh&gt;</span>
+          <input
+            id="command"
+            name="command"
+            type="text"
+            placeholder="whoami"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">Send</button>
         </form>
       </section>
 
       <section class="grid">
-        <div class="card">
-          <h2>Output</h2>
-          <pre id="output" class="output" aria-live="polite"></pre>
-        </div>
         <div class="card">
           <h2>Raw Messages</h2>
           <div id="raw" class="raw"></div>
