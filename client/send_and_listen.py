@@ -87,7 +87,7 @@ def main() -> int:
             output_seen = True
         elif text.startswith("MSG-ID:") and "Cmd received" not in text:
             lines = text.splitlines()
-            if len(lines) > 1 and lines[-1].strip() != "Done":
+            if len(lines) > 1:
                 output_seen = True
         if done_seen:
             break
