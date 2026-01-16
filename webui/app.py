@@ -104,13 +104,14 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
         raw_messages: List[str] = []
         output_seen = False
         more_sent = False
+        done_seen = False
 
         while time.monotonic() < deadline:
             remaining = max(0.0, deadline - time.monotonic())
             try:
                 text = listener.messages.get(timeout=min(1.0, remaining))
             except queue.Empty:
-                if last_cmd_id and not output_seen and not more_sent:
+                if last_cmd_id and not done_seen and not more_sent:
                     if time.monotonic() - start >= MORE_DELAY:
                         interface.sendText(f"more {last_cmd_id}", channelIndex=channel)
                         more_sent = True
@@ -120,14 +121,22 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
             if text.startswith("MSG-ID:"):
                 first_line = text.splitlines()[0]
                 last_cmd_id = first_line.replace("MSG-ID:", "").strip()
+                if "\nDone" in text or text.rstrip().endswith("Done"):
+                    done_seen = True
 
             if "Output:" in text:
                 output_seen = True
                 output_text = text.split("Output:", 1)[1].lstrip()
+                output_lines = output_text.splitlines()
+                if output_lines and output_lines[-1].strip() == "Done":
+                    output_text = "\n".join(output_lines[:-1]).rstrip()
                 if output_text:
                     outputs.append(output_text)
 
             if "No more output" in text:
+                break
+
+            if done_seen:
                 break
 
         unique_outputs: List[str] = []
