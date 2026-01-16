@@ -66,7 +66,7 @@ class MiniC2:
         text: str,
         destination_id: Optional[str] = None,
         repeats: int = 1,
-        delay: float = 0.2,
+        delay: float = 0.0,
         also_broadcast: bool = False,
     ) -> None:
         for attempt in range(repeats):
