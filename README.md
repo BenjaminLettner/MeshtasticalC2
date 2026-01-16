@@ -17,7 +17,9 @@ python app/minic2.py --port /dev/ttyACM1 --channel-index 1 --timeout 60
 
 ## Client (Mac)
 ```bash
-./client/send_and_listen.sh --port /dev/cu.usbmodem1101 --timeout 45 whoami
+/Users/benjaminlettner/meshtastic_venv/bin/python client/send_and_listen.py \
+  --port /dev/cu.usbmodem1101 \
+  --command whoami
 ```
 
 ## Web UI (Mac)

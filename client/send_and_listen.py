@@ -54,6 +54,7 @@ def main() -> int:
     last_cmd_id: Optional[str] = None
     output_seen = False
     done_seen = False
+    ack_seen = False
     last_more_at = 0.0
     more_attempts = 0
     max_more_attempts = 1
@@ -63,11 +64,15 @@ def main() -> int:
         try:
             text = listener.messages.get(timeout=min(1.0, remaining))
         except queue.Empty:
-            if output_seen and last_cmd_id and not done_seen and more_attempts < max_more_attempts:
+            if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
                 if time.monotonic() - last_more_at >= args.more_delay:
-                    interface.sendText(f"more {last_cmd_id}", channelIndex=args.channel)
-                    last_more_at = time.monotonic()
-                    more_attempts += 1
+                    if output_seen or ack_seen:
+                        interface.sendText(f"more {last_cmd_id}", channelIndex=args.channel)
+                        last_more_at = time.monotonic()
+                        more_attempts += 1
+            continue
+
+        if text.strip().startswith("more "):
             continue
 
         print(f"\n[TEXT]\n{text}\n", flush=True)
@@ -76,8 +81,14 @@ def main() -> int:
             last_cmd_id = first_line.replace("MSG-ID:", "").strip()
             if "\nDone" in text:
                 done_seen = True
+        if "Cmd received" in text:
+            ack_seen = True
         if "Output:" in text:
             output_seen = True
+        elif text.startswith("MSG-ID:") and "Cmd received" not in text:
+            lines = text.splitlines()
+            if len(lines) > 1 and lines[-1].strip() != "Done":
+                output_seen = True
         if done_seen:
             break
     if not output_seen:
