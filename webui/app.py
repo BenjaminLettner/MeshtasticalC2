@@ -79,7 +79,17 @@ def run_command() -> object:
         available_ports = [p.device for p in list_ports.comports()]
         if not available_ports:
             return jsonify({"error": "No serial devices detected"}), 400
-        port = available_ports[0]
+        preferred = [
+            p
+            for p in available_ports
+            if re.search(r"usbmodem|usbserial|ttyACM|ttyUSB", p, re.IGNORECASE)
+        ]
+        if PORT and PORT in available_ports:
+            port = PORT
+        elif preferred:
+            port = preferred[0]
+        else:
+            port = available_ports[0]
 
     try:
         with COMMAND_LOCK:
