@@ -131,6 +131,44 @@ Server -> Client
 - Additional chunks omit `Output:` and only include `MSG-ID` + payload.
 - Clients can request more output with `more <MSG-ID>` until `Done`.
 
+## Remote Channel Setup (Both WisMesh Devices)
+Use the same **secondary channel** key on both radios so the C2 traffic is private and separate from default traffic.
+
+### Option A: Meshtastic App (recommended)
+1) Open the device in Meshtastic mobile or desktop app.
+2) Go to **Channels**.
+3) Select **Channel 1** (or another secondary slot).
+4) Set **Name** to `remote` (or your preferred label).
+5) Set **PSK** to a custom value (tap “Generate” or paste a shared key).
+6) Save and repeat on the second device with the **same PSK**.
+
+### Option B: CLI (macOS)
+```bash
+meshtastic --port /dev/cu.usbmodem101 --setch-name 1 remote
+meshtastic --port /dev/cu.usbmodem101 --setch-psk 1 <your-psk>
+```
+Repeat on the second device using its port. You can confirm with:
+```bash
+meshtastic --info --port /dev/cu.usbmodem101
+```
+
+## Device Detection (Host + Pi)
+
+### macOS (Web UI / CLI host)
+```bash
+ls /dev/cu.usbmodem* /dev/cu.usbserial* 2>/dev/null
+```
+Pick the device you use for the Web UI/CLI (e.g. `/dev/cu.usbmodem101`). Verify it responds:
+```bash
+meshtastic --info --port /dev/cu.usbmodem101
+```
+
+### Raspberry Pi (MiniC2 host)
+```bash
+ls -l /dev/serial/by-id
+```
+Use the `usb-RAKwireless_*` link (typically `/dev/ttyACM0`) when starting MiniC2.
+
 ## Troubleshooting
 - **No output / timeouts:** ensure only one client is connected to the radio (Web UI or CLI, not both).
 - **Serial disconnects:** close Meshtastic.app or any serial monitor.
