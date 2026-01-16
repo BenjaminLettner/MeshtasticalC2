@@ -20,19 +20,19 @@ Run the service in the background:
 nohup ~/meshtasticalc2_venv/bin/python ~/MeshtasticalC2/app/minic2.py \
   --port /dev/ttyACM0 \
   --channel-index 1 \
-  --timeout 60 \
+  --timeout 180 \
   > ~/minic2.log 2>&1 &
 ```
 
 ## Run (Python directly)
 ```bash
-python app/minic2.py --port /dev/ttyACM0 --channel-index 1 --timeout 60
+python app/minic2.py --port /dev/ttyACM0 --channel-index 1 --timeout 180
 ```
 
 ## Env
 - `MINIC2_PORT` (default: `/dev/ttyACM0`)
 - `MINIC2_CHANNEL` (default: `1`)
-- `MINIC2_TIMEOUT` (default: `20`)
+- `MINIC2_TIMEOUT` (default: `180`)
 
 ## Client (Mac)
 ```bash
@@ -46,7 +46,7 @@ python app/minic2.py --port /dev/ttyACM0 --channel-index 1 --timeout 60
 MINIC2_WEBUI_PORT=5050 \
 MINIC2_CLIENT_PORT=/dev/cu.usbmodem1101 \
 MINIC2_CLIENT_CHANNEL=1 \
-MINIC2_CLIENT_TIMEOUT=60 \
+MINIC2_CLIENT_TIMEOUT=180 \
 python webui/app.py
 ```
 Open http://localhost:5050
@@ -66,6 +66,23 @@ launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
 - The client waits for a `Done` marker or max timeout.
 
 ## Communication Flow
+```text
+ Mac Web UI / CLI
+        |
+        | 1) TEXT command: "ls"
+        v
+  [Meshtastic Mesh]
+        |
+        v
+ Raspberry Pi + MiniC2
+        |
+        | 2) Executes command locally
+        | 3) Sends output chunks as TEXT with MSG-ID
+        | 4) Final chunk ends with "Done"
+        v
+ Mac Web UI / CLI renders output
+```
+
 1) Client sends a TEXT message command (e.g., `whoami`).
 2) MiniC2 executes the command on the Pi.
 3) Output is chunked into TEXT messages and sent back with `MSG-ID`.
