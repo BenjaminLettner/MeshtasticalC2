@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--channel", type=int, default=1)
     parser.add_argument("--timeout", type=int, default=60)
     parser.add_argument("--command", required=True)
-    parser.add_argument("--more-delay", type=int, default=3)
+    parser.add_argument("--more-delay", type=int, default=1)
     parser.add_argument("--wait-config", action="store_true")
     return parser.parse_args()
 
