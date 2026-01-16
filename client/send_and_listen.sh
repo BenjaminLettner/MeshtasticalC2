@@ -5,7 +5,7 @@ PORT="/dev/cu.usbmodem1101"
 PYTHON_BIN="/Users/benjaminlettner/meshtastic_venv/bin/python"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLIENT_SCRIPT="${SCRIPT_DIR}/send_and_listen.py"
-TIMEOUT_SECONDS=45
+TIMEOUT_SECONDS=180
 CHANNEL_INDEX=1
 
 while [[ $# -gt 0 ]]; do
