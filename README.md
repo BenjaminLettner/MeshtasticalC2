@@ -88,6 +88,49 @@ launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
 3) Output is chunked into TEXT messages and sent back with `MSG-ID`.
 4) The final chunk includes `Done` so the client can stop waiting.
 
+## Communication Scheme (TCP-style)
+
+### States
+```text
+CLIENT (Web UI / CLI)                          SERVER (MiniC2)
+----------------------------------            ---------------------------
+IDLE                                          LISTEN
+  | cmd "ls"                                      |
+  |---------------------------------------------> |
+  |                                               | EXEC
+  |                                               |  - run command
+  |                                               |
+  |<--------------------------------------------- | ACK (MSG-ID + Cmd received)
+  |                                               |
+  |<--------------------------------------------- | OUTPUT chunk 1 (MSG-ID + Output:)
+  |                                               | STORE remaining chunks
+  | more <MSG-ID>                                 |
+  |---------------------------------------------> |
+  |<--------------------------------------------- | OUTPUT chunk N (MSG-ID)
+  |                                               | ...
+  |<--------------------------------------------- | DONE (MSG-ID + Done)
+  v                                               v
+IDLE                                          LISTEN
+```
+
+### Message Formats
+```text
+Client -> Server
+  <command>
+  more <MSG-ID>
+
+Server -> Client
+  MSG-ID:<id>\nHost:<hostname>\nCmd received: <command>
+  MSG-ID:<id>\nOutput:\n<chunk>
+  MSG-ID:<id>\n<chunk>
+  MSG-ID:<id>\nDone
+```
+
+### Notes
+- The first output chunk includes the `Output:` prefix.
+- Additional chunks omit `Output:` and only include `MSG-ID` + payload.
+- Clients can request more output with `more <MSG-ID>` until `Done`.
+
 ## Troubleshooting
 - **No output / timeouts:** ensure only one client is connected to the radio (Web UI or CLI, not both).
 - **Serial disconnects:** close Meshtastic.app or any serial monitor.
