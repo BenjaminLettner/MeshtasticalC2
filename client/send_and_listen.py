@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MeshtasticalC2 client send+listen")
     parser.add_argument("--port", required=True)
     parser.add_argument("--channel", type=int, default=1)
-    parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--command", required=True)
     parser.add_argument("--more-delay", type=int, default=1)
     parser.add_argument("--wait-config", action="store_true")
@@ -81,7 +81,7 @@ def main() -> int:
         if done_seen:
             print("[client] completed without Output", flush=True)
         else:
-            print(f"[client] timeout after {args.timeout}s; no Output received", flush=True)
+            print(f"[client] max wait {args.timeout}s reached; no Output received", flush=True)
     interface.close()
     return 0 if output_seen else 1
 
