@@ -27,15 +27,16 @@ class OutputBuffer:
         with self._lock:
             self._buffers[cmd_id] = chunks
 
-    def pop_next(self, cmd_id: str) -> Optional[str]:
+    def pop_next(self, cmd_id: str) -> Tuple[Optional[str], bool]:
         with self._lock:
             chunks = self._buffers.get(cmd_id)
             if not chunks:
-                return None
+                return None, False
             next_chunk = chunks.popleft()
-            if not chunks:
+            is_last = not chunks
+            if is_last:
                 self._buffers.pop(cmd_id, None)
-            return next_chunk
+            return next_chunk, is_last
 
 
 class MiniC2:
@@ -111,10 +112,12 @@ class MiniC2:
         ).start()
 
     def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
-        chunk = self.output_buffer.pop_next(cmd_id)
+        chunk, is_last = self.output_buffer.pop_next(cmd_id)
         if not chunk:
             self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
             return
+        if is_last:
+            chunk = f"{chunk}\nDone"
         self._send_text(chunk, destination_id=destination_id)
 
     def _execute_and_respond(
@@ -147,9 +150,8 @@ class MiniC2:
 
             if len(chunks) == 1:
                 first_chunk = chunks.popleft()
-                first_chunk = f"{first_chunk}\n{timing_line}"
+                first_chunk = f"{first_chunk}\n{timing_line}\nDone"
                 self._send_text_repeated(first_chunk, destination_id=destination_id)
-                self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
                 return
 
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
