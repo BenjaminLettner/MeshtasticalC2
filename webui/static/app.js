@@ -3,12 +3,16 @@ const commandInput = document.getElementById("command");
 const outputEl = document.getElementById("output");
 const rawEl = document.getElementById("raw");
 const statusEl = document.getElementById("status");
+const statusTextEl = document.getElementById("status-text");
 const portInput = document.getElementById("port");
 const channelInput = document.getElementById("channel");
 const refreshPortsButton = document.getElementById("refresh-ports");
+const historyEl = document.getElementById("history");
+
+const HISTORY_KEY = "meshtasticalc2-history";
 
 const setStatus = (text, variant = "idle") => {
-  statusEl.textContent = text;
+  statusTextEl.textContent = text;
   statusEl.dataset.variant = variant;
 };
 
@@ -28,6 +32,41 @@ const renderRaw = (messages) => {
 
 const renderOutput = (text) => {
   outputEl.textContent = text || "";
+};
+
+const loadHistory = () => {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
+const saveHistory = (items) => {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+};
+
+const renderHistory = (items) => {
+  historyEl.innerHTML = "";
+  if (!items.length) {
+    historyEl.innerHTML = '<div class="history-item">No history yet.</div>';
+    return;
+  }
+  items.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `<strong>${item.command}</strong>${item.summary}`;
+    historyEl.appendChild(div);
+  });
+};
+
+const addHistoryEntry = (entry) => {
+  const items = loadHistory();
+  items.unshift(entry);
+  const trimmed = items.slice(0, 20);
+  saveHistory(trimmed);
+  renderHistory(trimmed);
 };
 
 form.addEventListener("submit", async (event) => {
@@ -59,16 +98,27 @@ form.addEventListener("submit", async (event) => {
 
     renderOutput(data.output || "<no output>");
     renderRaw(data.raw);
-    setStatus(data.received ? `Done in ${data.duration}s` : "No output", data.received ? "ok" : "warn");
+    const statusText = data.received ? `Done in ${data.duration}s` : "No output";
+    setStatus(statusText, data.received ? "ok" : "warn");
+    addHistoryEntry({
+      command,
+      summary: `${statusText} · ${new Date().toLocaleTimeString()}`,
+    });
   } catch (error) {
     renderOutput("");
     renderRaw([]);
-    setStatus(error.message || "Error", "error");
+    const message = error.message || "Error";
+    setStatus(message, "error");
+    addHistoryEntry({
+      command,
+      summary: `Error · ${message}`,
+    });
   }
 });
 
 setStatus("Idle", "idle");
 renderRaw([]);
+renderHistory(loadHistory());
 
 const loadPorts = async () => {
   try {

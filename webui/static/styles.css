@@ -1,13 +1,14 @@
 :root {
-  color-scheme: light;
-  --bg: #f4efe7;
-  --ink: #1b1a16;
-  --muted: #5d564c;
-  --accent: #d96f32;
-  --accent-dark: #a14d1f;
-  --panel: #fff9f1;
-  --border: rgba(27, 26, 22, 0.15);
-  --shadow: 0 20px 50px rgba(27, 26, 22, 0.12);
+  color-scheme: dark;
+  --bg: #0d0e12;
+  --ink: #f3f4f6;
+  --muted: #9aa0aa;
+  --accent: #ff8c42;
+  --accent-dark: #ffb07a;
+  --panel: #151720;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  --glow: rgba(255, 140, 66, 0.35);
 }
 
 * {
@@ -17,7 +18,7 @@
 body {
   margin: 0;
   font-family: "Space Grotesk", sans-serif;
-  background: radial-gradient(circle at top, #fff3df 0%, #f4efe7 45%, #e9dfd0 100%);
+  background: radial-gradient(circle at top, rgba(255, 140, 66, 0.12) 0%, #0d0e12 45%, #090a0f 100%);
   color: var(--ink);
 }
 
@@ -60,26 +61,43 @@ h1 {
   border: 1px solid var(--border);
   background: var(--panel);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .status[data-variant="busy"] {
-  background: rgba(217, 111, 50, 0.15);
+  background: rgba(255, 140, 66, 0.18);
   color: var(--accent-dark);
 }
 
 .status[data-variant="ok"] {
-  background: rgba(46, 125, 79, 0.15);
-  color: #2e7d4f;
+  background: rgba(66, 214, 141, 0.18);
+  color: #7ff0b2;
 }
 
 .status[data-variant="warn"] {
-  background: rgba(182, 108, 25, 0.2);
-  color: #b66c19;
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffd08a;
 }
 
 .status[data-variant="error"] {
-  background: rgba(175, 40, 40, 0.18);
-  color: #af2828;
+  background: rgba(255, 76, 76, 0.2);
+  color: #ff9c9c;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--accent);
+  animation: spin 1s linear infinite;
+  display: none;
+}
+
+.status[data-variant="busy"] .spinner {
+  display: inline-block;
 }
 
 .panel {
@@ -108,7 +126,8 @@ h1 {
   border-radius: 12px;
   border: 1px solid var(--border);
   font-size: 1rem;
-  background: #fff;
+  background: #0f1118;
+  color: var(--ink);
 }
 
 .command-row button {
@@ -116,7 +135,7 @@ h1 {
   border: none;
   border-radius: 12px;
   background: var(--accent);
-  color: #fff;
+  color: #130c06;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -159,14 +178,16 @@ h1 {
   border-radius: 10px;
   border: 1px solid var(--border);
   font-size: 0.95rem;
-  background: #fff;
+  background: #0f1118;
+  color: var(--ink);
 }
 
 .port-row button {
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: #10131b;
+  color: var(--ink);
   font-size: 0.85rem;
   cursor: pointer;
 }
@@ -176,6 +197,8 @@ h1 {
   border-radius: 10px;
   border: 1px solid var(--border);
   font-size: 0.95rem;
+  background: #0f1118;
+  color: var(--ink);
 }
 
 .unit {
@@ -192,8 +215,8 @@ h1 {
 }
 
 .card {
-  background: #1e1b16;
-  color: #fef8ef;
+  background: #14151c;
+  color: #f5f5f7;
   border-radius: 20px;
   padding: 20px;
   box-shadow: var(--shadow);
@@ -207,7 +230,7 @@ h1 {
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: #f7cda7;
+  color: #ffb07a;
 }
 
 .output {
@@ -224,14 +247,42 @@ h1 {
   gap: 12px;
   font-family: "Source Code Pro", monospace;
   font-size: 0.85rem;
-  color: #f1e6d8;
+  color: #d7dbe6;
 }
 
 .raw-item {
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: "Source Code Pro", monospace;
+  font-size: 0.85rem;
+  color: #e5e7ef;
+}
+
+.history-item {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-item strong {
+  display: block;
+  color: #ffb07a;
+  margin-bottom: 6px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .footer {
