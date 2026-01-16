@@ -7,7 +7,45 @@ Minimal Meshtastic-based C2 service that executes incoming text commands and sen
 - macOS client with Meshtastic CLI (via venv)
 - Both radios joined to the same Meshtastic channel
 
-## Deployment (Raspberry Pi)
+## 1) Set up the Remote Channel (Both WisMesh Devices)
+Use the same **secondary channel** key on both radios so the C2 traffic is private and separate from default traffic.
+
+### Option A: Meshtastic App (recommended)
+1) Open the device in Meshtastic mobile or desktop app.
+2) Go to **Channels**.
+3) Select **Channel 1** (or another secondary slot).
+4) Set **Name** to `remote` (or your preferred label).
+5) Set **PSK** to a custom value (tap “Generate” or paste a shared key).
+6) Save and repeat on the second device with the **same PSK**.
+
+### Option B: CLI (macOS)
+```bash
+meshtastic --port /dev/cu.usbmodem101 --setch-name 1 remote
+meshtastic --port /dev/cu.usbmodem101 --setch-psk 1 <your-psk>
+```
+Repeat on the second device using its port. Confirm with:
+```bash
+meshtastic --info --port /dev/cu.usbmodem101
+```
+
+## 2) Detect Devices (Host + Pi)
+
+### macOS (Web UI / CLI host)
+```bash
+ls /dev/cu.usbmodem* /dev/cu.usbserial* 2>/dev/null
+```
+Pick the device used for the Web UI/CLI (e.g. `/dev/cu.usbmodem101`). Verify it responds:
+```bash
+meshtastic --info --port /dev/cu.usbmodem101
+```
+
+### Raspberry Pi (MiniC2 host)
+```bash
+ls -l /dev/serial/by-id
+```
+Use the `usb-RAKwireless_*` link (typically `/dev/ttyACM0`) when starting MiniC2.
+
+## 3) Install on Raspberry Pi
 ```bash
 git clone https://github.com/BenjaminLettner/MeshtasticalC2.git
 cd MeshtasticalC2
@@ -24,27 +62,10 @@ nohup ~/meshtasticalc2_venv/bin/python ~/MeshtasticalC2/app/minic2.py \
   > ~/minic2.log 2>&1 &
 ```
 
-## Run (Python directly)
-```bash
-python app/minic2.py --port /dev/ttyACM0 --channel-index 1 --timeout 180
-```
-
-## Env
-- `MINIC2_PORT` (default: `/dev/ttyACM0`)
-- `MINIC2_CHANNEL` (default: `1`)
-- `MINIC2_TIMEOUT` (default: `180`)
-
-## Client (Mac)
-```bash
-/Users/benjaminlettner/meshtastic_venv/bin/python client/send_and_listen.py \
-  --port /dev/cu.usbmodem1101 \
-  --command whoami
-```
-
-## Web UI (Mac)
+## 4) Start the Web UI (macOS)
 ```bash
 MINIC2_WEBUI_PORT=5050 \
-MINIC2_CLIENT_PORT=/dev/cu.usbmodem1101 \
+MINIC2_CLIENT_PORT=/dev/cu.usbmodem101 \
 MINIC2_CLIENT_CHANNEL=1 \
 MINIC2_CLIENT_TIMEOUT=180 \
 python webui/app.py
@@ -61,9 +82,33 @@ Stop it with:
 launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
 ```
 
+## 5) CLI Client (macOS)
+```bash
+/Users/benjaminlettner/meshtastic_venv/bin/python client/send_and_listen.py \
+  --port /dev/cu.usbmodem101 \
+  --command whoami
+```
+
+## Session Mode
+MiniC2 keeps a per-sender working directory so `cd` persists.
+
+Commands:
+```
+session start
+session status
+session end
+cd /path
+```
+
+## Env
+- `MINIC2_PORT` (default: `/dev/ttyACM0`)
+- `MINIC2_CHANNEL` (default: `1`)
+- `MINIC2_TIMEOUT` (default: `180`)
+
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
 - The client waits for a `Done` marker or max timeout.
+- Over-the-air traffic is encrypted **only if your channel PSK is set** (default PSK is shared).
 
 ## Communication Flow
 ```text
@@ -130,44 +175,6 @@ Server -> Client
 - The first output chunk includes the `Output:` prefix.
 - Additional chunks omit `Output:` and only include `MSG-ID` + payload.
 - Clients can request more output with `more <MSG-ID>` until `Done`.
-
-## Remote Channel Setup (Both WisMesh Devices)
-Use the same **secondary channel** key on both radios so the C2 traffic is private and separate from default traffic.
-
-### Option A: Meshtastic App (recommended)
-1) Open the device in Meshtastic mobile or desktop app.
-2) Go to **Channels**.
-3) Select **Channel 1** (or another secondary slot).
-4) Set **Name** to `remote` (or your preferred label).
-5) Set **PSK** to a custom value (tap “Generate” or paste a shared key).
-6) Save and repeat on the second device with the **same PSK**.
-
-### Option B: CLI (macOS)
-```bash
-meshtastic --port /dev/cu.usbmodem101 --setch-name 1 remote
-meshtastic --port /dev/cu.usbmodem101 --setch-psk 1 <your-psk>
-```
-Repeat on the second device using its port. You can confirm with:
-```bash
-meshtastic --info --port /dev/cu.usbmodem101
-```
-
-## Device Detection (Host + Pi)
-
-### macOS (Web UI / CLI host)
-```bash
-ls /dev/cu.usbmodem* /dev/cu.usbserial* 2>/dev/null
-```
-Pick the device you use for the Web UI/CLI (e.g. `/dev/cu.usbmodem101`). Verify it responds:
-```bash
-meshtastic --info --port /dev/cu.usbmodem101
-```
-
-### Raspberry Pi (MiniC2 host)
-```bash
-ls -l /dev/serial/by-id
-```
-Use the `usb-RAKwireless_*` link (typically `/dev/ttyACM0`) when starting MiniC2.
 
 ## Troubleshooting
 - **No output / timeouts:** ensure only one client is connected to the radio (Web UI or CLI, not both).
