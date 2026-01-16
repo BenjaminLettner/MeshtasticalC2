@@ -147,6 +147,30 @@ h1 {
   color: var(--muted);
 }
 
+.port-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.port-row select {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.port-row button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .options input {
   padding: 10px 12px;
   border-radius: 10px;

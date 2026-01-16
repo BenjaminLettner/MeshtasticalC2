@@ -3,9 +3,9 @@ const commandInput = document.getElementById("command");
 const outputEl = document.getElementById("output");
 const rawEl = document.getElementById("raw");
 const statusEl = document.getElementById("status");
-const timeoutInput = document.getElementById("timeout");
 const portInput = document.getElementById("port");
 const channelInput = document.getElementById("channel");
+const refreshPortsButton = document.getElementById("refresh-ports");
 
 const setStatus = (text, variant = "idle") => {
   statusEl.textContent = text;
@@ -41,7 +41,6 @@ form.addEventListener("submit", async (event) => {
 
   const payload = {
     command,
-    timeout: Number(timeoutInput.value || 60),
     port: portInput.value.trim(),
     channel: Number(channelInput.value || 1),
   };
@@ -70,3 +69,33 @@ form.addEventListener("submit", async (event) => {
 
 setStatus("Idle", "idle");
 renderRaw([]);
+
+const loadPorts = async () => {
+  try {
+    const response = await fetch("/api/ports");
+    const data = await response.json();
+    const ports = data.ports || [];
+    portInput.innerHTML = "";
+    if (ports.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No devices found";
+      portInput.appendChild(option);
+      return;
+    }
+    ports.forEach((port) => {
+      const option = document.createElement("option");
+      option.value = port;
+      option.textContent = port;
+      portInput.appendChild(option);
+    });
+    if (ports.length === 1) {
+      portInput.value = ports[0];
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+refreshPortsButton.addEventListener("click", loadPorts);
+loadPorts();

@@ -36,13 +36,12 @@
           </div>
           <div class="options">
             <label>
-              Timeout
-              <input id="timeout" type="number" min="10" max="180" value="60" />
-              <span class="unit">sec</span>
-            </label>
-            <label>
-              Port
-              <input id="port" type="text" placeholder="/dev/cu.usbmodem1101" />
+              Serial Device
+              <div class="port-row">
+                <select id="port"></select>
+                <button type="button" id="refresh-ports">Refresh</button>
+              </div>
+              <span class="unit">Auto-selects if only one.</span>
             </label>
             <label>
               Channel

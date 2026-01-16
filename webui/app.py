@@ -8,6 +8,7 @@ from typing import List, Optional
 from flask import Flask, jsonify, request, send_from_directory
 import meshtastic.serial_interface
 from pubsub import pub
+from serial.tools import list_ports
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,6 +45,12 @@ def index() -> object:
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/api/ports", methods=["GET"])
+def list_serial_ports() -> object:
+    ports = [port.device for port in list_ports.comports()]
+    return jsonify({"ports": ports})
+
+
 @app.route("/api/command", methods=["POST"])
 def run_command() -> object:
     payload = request.get_json(silent=True) or {}
@@ -51,18 +58,22 @@ def run_command() -> object:
     if not command:
         return jsonify({"error": "Command is required"}), 400
 
-    port = (payload.get("port") or "").strip() or PORT
+    port = (payload.get("port") or "").strip()
     channel = payload.get("channel") if payload.get("channel") is not None else CHANNEL
-    timeout = payload.get("timeout") if payload.get("timeout") is not None else TIMEOUT
 
     try:
         channel = int(channel)
-        timeout = int(timeout)
     except ValueError:
         return jsonify({"error": "Invalid channel or timeout"}), 400
 
+    if not port:
+        available_ports = [p.device for p in list_ports.comports()]
+        if not available_ports:
+            return jsonify({"error": "No serial devices detected"}), 400
+        port = available_ports[0]
+
     with COMMAND_LOCK:
-        result = _send_and_listen(command, port=port, channel=channel, timeout=timeout)
+        result = _send_and_listen(command, port=port, channel=channel, timeout=TIMEOUT)
 
     return jsonify(result)
 
