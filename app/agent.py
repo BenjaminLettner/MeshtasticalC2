@@ -39,13 +39,13 @@ class OutputBuffer:
             return next_chunk, is_last
 
 
-class MiniC2:
+class AgentService:
     def __init__(self, port: str, channel_index: int, timeout: int) -> None:
         self.port = port
         self.channel_index = channel_index
         self.timeout = timeout
         self.host = socket.gethostname()
-        self.logger = logging.getLogger("minic2")
+        self.logger = logging.getLogger("agent")
         self.interface = meshtastic.serial_interface.SerialInterface(self.port)
         self.output_buffer = OutputBuffer()
         self._command_lock = threading.Lock()
@@ -275,7 +275,7 @@ class MiniC2:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Minimal Meshtastic C2")
+    parser = argparse.ArgumentParser(description="MeshtasticalC2 agent service")
     parser.add_argument("--port", default=os.getenv("MINIC2_PORT", "/dev/ttyACM0"))
     parser.add_argument("--channel-index", type=int, default=int(os.getenv("MINIC2_CHANNEL", "1")))
     parser.add_argument("--timeout", type=int, default=int(os.getenv("MINIC2_TIMEOUT", "20")))
@@ -285,9 +285,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    c2 = MiniC2(args.port, args.channel_index, args.timeout)
-    logging.getLogger("minic2").info("MiniC2 running on %s channel %s", args.port, args.channel_index)
-    c2.run()
+    agent = AgentService(args.port, args.channel_index, args.timeout)
+    logging.getLogger("agent").info("Agent service running on %s channel %s", args.port, args.channel_index)
+    agent.run()
 
 
 if __name__ == "__main__":

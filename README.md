@@ -4,7 +4,7 @@ Minimal Meshtastic-based C2 service that executes incoming text commands and sen
 
 ## Requirements
 - Raspberry Pi with a Meshtastic radio attached (WisMesh/RAK4631)
-- macOS client with Meshtastic CLI (via venv)
+- macOS controller with Meshtastic CLI (via venv)
 - Both radios joined to the same Meshtastic channel
 
 ## 1) Set up the Remote Channel (Both WisMesh Devices)
@@ -30,7 +30,7 @@ meshtastic --info --port /dev/cu.usbmodem101
 
 ## 2) Detect Devices (Host + Pi)
 
-### macOS (Web UI / CLI host)
+### macOS (Controller Web UI / CLI)
 ```bash
 ls /dev/cu.usbmodem* /dev/cu.usbserial* 2>/dev/null
 ```
@@ -39,11 +39,11 @@ Pick the device used for the Web UI/CLI (e.g. `/dev/cu.usbmodem101`). Verify it 
 meshtastic --info --port /dev/cu.usbmodem101
 ```
 
-### Raspberry Pi (MiniC2 host)
+### Raspberry Pi (Agent host)
 ```bash
 ls -l /dev/serial/by-id
 ```
-Use the `usb-RAKwireless_*` link (typically `/dev/ttyACM0`) when starting MiniC2.
+Use the `usb-RAKwireless_*` link (typically `/dev/ttyACM0`) when starting the agent service.
 
 ## 3) Install on Raspberry Pi
 ```bash
@@ -55,7 +55,7 @@ python3 -m venv ~/meshtasticalc2_venv
 
 Run the service in the background:
 ```bash
-nohup ~/meshtasticalc2_venv/bin/python ~/MeshtasticalC2/app/minic2.py \
+nohup ~/meshtasticalc2_venv/bin/python ~/MeshtasticalC2/app/agent.py \
   --port /dev/ttyACM0 \
   --channel-index 1 \
   --timeout 180 \
@@ -82,15 +82,15 @@ Stop it with:
 launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
 ```
 
-## 5) CLI Client (macOS)
+## 5) Controller CLI (macOS)
 ```bash
-/Users/benjaminlettner/meshtastic_venv/bin/python client/send_and_listen.py \
+/Users/benjaminlettner/meshtastic_venv/bin/python controller/send_and_listen.py \
   --port /dev/cu.usbmodem101 \
   --command whoami
 ```
 
 ## Session Mode
-MiniC2 keeps a per-sender working directory so `cd` persists.
+The agent keeps a per-sender working directory so `cd` persists.
 
 Commands:
 ```
@@ -107,37 +107,37 @@ cd /path
 
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
-- The client waits for a `Done` marker or max timeout.
+- The controller waits for a `Done` marker or max timeout.
 - Over-the-air traffic is encrypted **only if your channel PSK is set** (default PSK is shared).
 
 ## Communication Flow
 ```text
- Mac Web UI / CLI
+ Mac Controller UI / CLI
         |
         | 1) TEXT command: "ls"
         v
   [Meshtastic Mesh]
         |
         v
- Raspberry Pi + MiniC2
+ Raspberry Pi + Agent service
         |
         | 2) Executes command locally
         | 3) Sends output chunks as TEXT with MSG-ID
         | 4) Final chunk ends with "Done"
         v
- Mac Web UI / CLI renders output
+ Mac Controller UI / CLI renders output
 ```
 
-1) Client sends a TEXT message command (e.g., `whoami`).
-2) MiniC2 executes the command on the Pi.
+1) Controller sends a TEXT message command (e.g., `whoami`).
+2) Agent executes the command on the Pi.
 3) Output is chunked into TEXT messages and sent back with `MSG-ID`.
-4) The final chunk includes `Done` so the client can stop waiting.
+4) The final chunk includes `Done` so the controller can stop waiting.
 
 ## Communication Scheme (TCP-style)
 
 ### States
 ```text
-CLIENT (Web UI / CLI)                          SERVER (MiniC2)
+CONTROLLER (Web UI / CLI)                      AGENT (service)
 ----------------------------------            ---------------------------
 IDLE                                          LISTEN
   | cmd "ls"                                      |
@@ -160,11 +160,11 @@ IDLE                                          LISTEN
 
 ### Message Formats
 ```text
-Client -> Server
+Controller -> Agent
   <command>
   more <MSG-ID>
 
-Server -> Client
+Agent -> Controller
   MSG-ID:<id>\nHost:<hostname>\nCmd received: <command>
   MSG-ID:<id>\nOutput:\n<chunk>
   MSG-ID:<id>\n<chunk>
@@ -174,10 +174,10 @@ Server -> Client
 ### Notes
 - The first output chunk includes the `Output:` prefix.
 - Additional chunks omit `Output:` and only include `MSG-ID` + payload.
-- Clients can request more output with `more <MSG-ID>` until `Done`.
+- Controllers can request more output with `more <MSG-ID>` until `Done`.
 
 ## Troubleshooting
-- **No output / timeouts:** ensure only one client is connected to the radio (Web UI or CLI, not both).
+- **No output / timeouts:** ensure only one controller is connected to the radio (Web UI or CLI, not both).
 - **Serial disconnects:** close Meshtastic.app or any serial monitor.
 - **WisMesh not found:** check `/dev/serial/by-id` and use `/dev/ttyACM0`.
 - **Logs:** `tail -n 120 ~/minic2.log` on the Pi.

@@ -6,7 +6,7 @@ This document lists targeted improvements and how to implement them later. Each 
 **Goal:** Prevent stale/duplicate `Done` packets from being re-sent and mixed into new output.
 
 **Steps:**
-1. Track `active_cmd_id` and `completed_cmd_ids` in `app/minic2.py`.
+1. Track `active_cmd_id` and `completed_cmd_ids` in `app/agent.py`.
 2. Ignore `more <id>` requests for unknown or completed IDs.
 3. Store last N command IDs with timestamps to reject late repeats.
 
@@ -20,15 +20,15 @@ This document lists targeted improvements and how to implement them later. Each 
 
 **Steps:**
 1. Append `DONE:<id>:<chunk_count>` in the final chunk.
-2. Update client/web UI to detect `DONE:` tokens and stop waiting.
+2. Update controller/web UI to detect `DONE:` tokens and stop waiting.
 
 **Test:**
-- Simulate packet loss; confirm client stops only when `DONE:` arrives.
+- Simulate packet loss; confirm controller stops only when `DONE:` arrives.
 
 ---
 
 ## 3) Reliable chunk paging protocol
-**Goal:** Only send additional chunks when explicitly requested by the client.
+**Goal:** Only send additional chunks when explicitly requested by the controller.
 
 **Steps:**
 1. On server, buffer chunks per `cmd_id` (e.g. list of chunks).
@@ -36,7 +36,7 @@ This document lists targeted improvements and how to implement them later. Each 
 3. Add `offset`/`page` in the `more` command.
 
 **Test:**
-- Large `ls` output: client requests 1 page at a time.
+- Large `ls` output: controller requests 1 page at a time.
 
 ---
 
@@ -46,10 +46,10 @@ This document lists targeted improvements and how to implement them later. Each 
 **Steps:**
 1. In `webui/app.py`, create a lock file (e.g. `/tmp/minic2-webui.lock`) when opening the port.
 2. If lock exists, return a clear JSON error to UI.
-3. Document “only one client at a time” in the Web UI.
+3. Document “only one controller at a time” in the Web UI.
 
 **Test:**
-- Start CLI while Web UI runs; Web UI should show a “Port busy” error.
+- Start controller CLI while Web UI runs; Web UI should show a “Port busy” error.
 
 ---
 
@@ -77,15 +77,15 @@ This document lists targeted improvements and how to implement them later. Each 
 
 ---
 
-## 7) Add retry/backoff policy (optional)
+## 7) Add retry/backoff policy
 **Goal:** Improve reliability without spamming the mesh.
 
 **Steps:**
-1. On client, add exponential backoff for `more` retries.
+1. On controller, add exponential backoff for `more` retries.
 2. Cap to `max_more_attempts` and report partial output.
 
 **Test:**
-- Force dropped packets and verify the client stops after max attempts with a warning.
+- Force dropped packets and verify the controller stops after max attempts with a warning.
 
 ---
 

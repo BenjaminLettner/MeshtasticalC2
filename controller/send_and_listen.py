@@ -25,7 +25,7 @@ class Listener:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="MeshtasticalC2 client send+listen")
+    parser = argparse.ArgumentParser(description="MeshtasticalC2 controller send+listen")
     parser.add_argument("--port", required=True)
     parser.add_argument("--channel", type=int, default=1)
     parser.add_argument("--timeout", type=int, default=180)
@@ -41,7 +41,7 @@ def main() -> int:
     pub.subscribe(listener.on_receive, "meshtastic.receive")
     pub.subscribe(listener.on_receive, "meshtastic.receive.text")
 
-    print(f"[client] connecting to {args.port}...", flush=True)
+    print(f"[controller] connecting to {args.port}...", flush=True)
     interface = meshtastic.serial_interface.SerialInterface(args.port)
     if args.wait_config:
         wait_for_config = getattr(interface, "waitForConfig", None)
@@ -53,7 +53,7 @@ def main() -> int:
         except queue.Empty:
             break
 
-    print(f"[client] sending: {args.command}", flush=True)
+    print(f"[controller] sending: {args.command}", flush=True)
     interface.sendText(args.command, channelIndex=args.channel)
 
     deadline = time.monotonic() + args.timeout
@@ -105,9 +105,9 @@ def main() -> int:
             break
     if not output_seen:
         if done_seen:
-            print("[client] completed without Output", flush=True)
+            print("[controller] completed without Output", flush=True)
         else:
-            print(f"[client] max wait {args.timeout}s reached; no Output received", flush=True)
+            print(f"[controller] max wait {args.timeout}s reached; no Output received", flush=True)
     interface.close()
     return 0 if output_seen else 1
 
