@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import queue
 import threading
 import time
@@ -48,7 +49,8 @@ def index() -> object:
 @app.route("/api/ports", methods=["GET"])
 def list_serial_ports() -> object:
     ports = [port.device for port in list_ports.comports()]
-    return jsonify({"ports": ports})
+    preferred = [p for p in ports if re.search(r"usbmodem|usbserial|ttyACM|ttyUSB", p, re.IGNORECASE)]
+    return jsonify({"ports": preferred or ports})
 
 
 @app.route("/api/command", methods=["POST"])
@@ -72,8 +74,11 @@ def run_command() -> object:
             return jsonify({"error": "No serial devices detected"}), 400
         port = available_ports[0]
 
-    with COMMAND_LOCK:
-        result = _send_and_listen(command, port=port, channel=channel, timeout=TIMEOUT)
+    try:
+        with COMMAND_LOCK:
+            result = _send_and_listen(command, port=port, channel=channel, timeout=TIMEOUT)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 503
 
     return jsonify(result)
 
