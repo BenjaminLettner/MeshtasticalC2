@@ -12,10 +12,10 @@ from typing import Deque, Dict, Optional, Tuple
 import meshtastic.serial_interface
 from pubsub import pub
 
-MAX_MESSAGE_LEN = 230
+MAX_MESSAGE_LEN = 200
 ACK_TEMPLATE = "MSG-ID:{cmd_id}\nHost:{host}\nCmd received: {command}"
 OUTPUT_PREFIX = "MSG-ID:{cmd_id}\nOutput:\n"
-OUTPUT_SUFFIX = "\n... (reply 'more {cmd_id}')"
+OUTPUT_SUFFIX = ""
 
 
 class OutputBuffer:
@@ -191,10 +191,9 @@ class MiniC2:
         combined = f"{combined}\n{timing_line}\nDone"
 
         prefix = OUTPUT_PREFIX.format(cmd_id=cmd_id)
-        suffix = OUTPUT_SUFFIX.format(cmd_id=cmd_id)
         max_payload = MAX_MESSAGE_LEN
 
-        first_limit = max_payload - len(prefix) - len(suffix)
+        first_limit = max_payload - len(prefix)
         if first_limit <= 0:
             return deque([f"MSG-ID:{cmd_id}\nOutput too long"])
 
@@ -205,7 +204,7 @@ class MiniC2:
             if first:
                 chunk_body = remaining[:first_limit]
                 remaining = remaining[first_limit:]
-                chunk = prefix + chunk_body + (suffix if remaining else "")
+                chunk = prefix + chunk_body
                 chunks.append(chunk)
                 first = False
             else:
