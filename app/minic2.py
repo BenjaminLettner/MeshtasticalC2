@@ -112,12 +112,10 @@ class MiniC2:
         ).start()
 
     def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
-        chunk, is_last = self.output_buffer.pop_next(cmd_id)
+        chunk, _ = self.output_buffer.pop_next(cmd_id)
         if not chunk:
             self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
             return
-        if is_last:
-            chunk = f"{chunk}\nDone"
         self._send_text(chunk, destination_id=destination_id)
 
     def _execute_and_respond(
@@ -137,9 +135,9 @@ class MiniC2:
                 result[2],
                 exec_done - exec_start,
             )
-            chunks = self._format_output(cmd_id, result)
             total_elapsed = exec_done - received_at
             timing_line = f"Timing: total={total_elapsed:.3f}s exec={exec_done - exec_start:.3f}s"
+            chunks = self._format_output(cmd_id, result, timing_line)
 
             if not chunks:
                 self._send_text(
@@ -150,7 +148,6 @@ class MiniC2:
 
             if len(chunks) == 1:
                 first_chunk = chunks.popleft()
-                first_chunk = f"{first_chunk}\n{timing_line}\nDone"
                 self._send_text_repeated(first_chunk, destination_id=destination_id)
                 return
 
@@ -158,7 +155,6 @@ class MiniC2:
             self._send_text(ack, destination_id=destination_id)
             time.sleep(0.1)
             first_chunk = chunks.popleft()
-            first_chunk = f"{first_chunk}\n{timing_line}"
             self._send_text_repeated(first_chunk, destination_id=destination_id)
             self.output_buffer.store(cmd_id, chunks)
 
@@ -178,7 +174,12 @@ class MiniC2:
             stderr = (stderr or "") + f"\nCommand timed out after {self.timeout}s"
         return stdout or "", stderr or "", process.returncode
 
-    def _format_output(self, cmd_id: str, result: Tuple[str, str, int]) -> Deque[str]:
+    def _format_output(
+        self,
+        cmd_id: str,
+        result: Tuple[str, str, int],
+        timing_line: str,
+    ) -> Deque[str]:
         stdout, stderr, exit_code = result
         combined = stdout
         if stderr:
@@ -186,6 +187,8 @@ class MiniC2:
         combined = combined.strip()
         if not combined:
             combined = "<no output>"
+
+        combined = f"{combined}\n{timing_line}\nDone"
 
         prefix = OUTPUT_PREFIX.format(cmd_id=cmd_id)
         suffix = OUTPUT_SUFFIX.format(cmd_id=cmd_id)
