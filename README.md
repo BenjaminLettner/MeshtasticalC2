@@ -3,11 +3,30 @@
 Minimal Meshtastic-based C2 service that executes incoming text commands and sends output back over the mesh.
 
 ## Requirements
-- Meshtastic device on the host (`/dev/ttyACM0` by default)
+- Raspberry Pi with a Meshtastic radio attached (WisMesh/RAK4631)
+- macOS client with Meshtastic CLI (via venv)
+- Both radios joined to the same Meshtastic channel
+
+## Deployment (Raspberry Pi)
+```bash
+git clone https://github.com/BenjaminLettner/MeshtasticalC2.git
+cd MeshtasticalC2
+python3 -m venv ~/meshtasticalc2_venv
+~/meshtasticalc2_venv/bin/pip install -r requirements.txt
+```
+
+Run the service in the background:
+```bash
+nohup ~/meshtasticalc2_venv/bin/python ~/MeshtasticalC2/app/minic2.py \
+  --port /dev/ttyACM0 \
+  --channel-index 1 \
+  --timeout 60 \
+  > ~/minic2.log 2>&1 &
+```
 
 ## Run (Python directly)
 ```bash
-python app/minic2.py --port /dev/ttyACM1 --channel-index 1 --timeout 60
+python app/minic2.py --port /dev/ttyACM0 --channel-index 1 --timeout 60
 ```
 
 ## Env
@@ -44,4 +63,16 @@ launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
 
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
-- Use `more <MSG-ID>` to fetch additional output.
+- The client waits for a `Done` marker or max timeout.
+
+## Communication Flow
+1) Client sends a TEXT message command (e.g., `whoami`).
+2) MiniC2 executes the command on the Pi.
+3) Output is chunked into TEXT messages and sent back with `MSG-ID`.
+4) The final chunk includes `Done` so the client can stop waiting.
+
+## Troubleshooting
+- **No output / timeouts:** ensure only one client is connected to the radio (Web UI or CLI, not both).
+- **Serial disconnects:** close Meshtastic.app or any serial monitor.
+- **WisMesh not found:** check `/dev/serial/by-id` and use `/dev/ttyACM0`.
+- **Logs:** `tail -n 120 ~/minic2.log` on the Pi.
