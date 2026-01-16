@@ -49,6 +49,7 @@ class MiniC2:
         self.interface = meshtastic.serial_interface.SerialInterface(self.port)
         self.output_buffer = OutputBuffer()
         self._command_lock = threading.Lock()
+        self._sessions: Dict[str, Dict[str, str]] = {}
 
         pub.subscribe(self._on_receive, "meshtastic.receive")
 
@@ -111,6 +112,44 @@ class MiniC2:
             daemon=True,
         ).start()
 
+    def _get_session(self, sender_id: str) -> Dict[str, str]:
+        session = self._sessions.get(sender_id)
+        if not session:
+            session = {"cwd": os.path.expanduser("~")}
+            self._sessions[sender_id] = session
+        return session
+
+    def _end_session(self, sender_id: str) -> None:
+        self._sessions.pop(sender_id, None)
+
+    def _handle_session_command(self, command: str, sender_id: str) -> Optional[Tuple[str, str, int]]:
+        normalized = command.strip().lower()
+        if normalized.startswith("session"):
+            parts = normalized.split()
+            if len(parts) == 1 or parts[1] == "status":
+                session = self._get_session(sender_id)
+                return (f"Session active\nCWD: {session['cwd']}", "", 0)
+            if parts[1] == "start":
+                session = self._get_session(sender_id)
+                return (f"Session started\nCWD: {session['cwd']}", "", 0)
+            if parts[1] == "end":
+                self._end_session(sender_id)
+                return ("Session ended", "", 0)
+            return ("Usage: session start | session status | session end", "", 0)
+
+        if normalized == "cd" or normalized.startswith("cd "):
+            session = self._get_session(sender_id)
+            target = command.split(" ", 1)[1].strip() if " " in command else "~"
+            target = os.path.expanduser(target)
+            if not os.path.isabs(target):
+                target = os.path.normpath(os.path.join(session["cwd"], target))
+            if not os.path.isdir(target):
+                return ("", f"cd: no such directory: {target}", 1)
+            session["cwd"] = target
+            return (f"CWD: {target}", "", 0)
+
+        return None
+
     def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
         chunk, _ = self.output_buffer.pop_next(cmd_id)
         if not chunk:
@@ -127,7 +166,17 @@ class MiniC2:
         with self._command_lock:
             cmd_id = str(int(time.time() * 1000))
             exec_start = time.monotonic()
-            result = self._run_command(command)
+            session_result = None
+            if destination_id:
+                session_result = self._handle_session_command(command, destination_id)
+            if session_result:
+                result = session_result
+            else:
+                cwd = None
+                if destination_id:
+                    session = self._get_session(destination_id)
+                    cwd = session["cwd"]
+                result = self._run_command(command, cwd=cwd)
             exec_done = time.monotonic()
             self.logger.info(
                 "Command result for %s: exit=%s elapsed=%.3fs",
@@ -158,13 +207,14 @@ class MiniC2:
             self._send_text_repeated(first_chunk, destination_id=destination_id)
             self.output_buffer.store(cmd_id, chunks)
 
-    def _run_command(self, command: str) -> Tuple[str, str, int]:
+    def _run_command(self, command: str, cwd: Optional[str] = None) -> Tuple[str, str, int]:
         process = subprocess.Popen(
             command,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            cwd=cwd,
         )
         try:
             stdout, stderr = process.communicate(timeout=self.timeout)

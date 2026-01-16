@@ -162,6 +162,11 @@ if (form && commandInput) {
         "  status    show active config",
         "  config    open configuration page",
         "  clear     clear console",
+        "",
+        "Remote session commands:",
+        "  session start   start or resume a session",
+        "  session status  show session status",
+        "  session end     end the current session",
       ].join("\n");
       appendOutputBlock(command, helpText, "Local help", "ok");
       addHistoryEntry({
