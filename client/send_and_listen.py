@@ -53,18 +53,18 @@ def main() -> int:
     deadline = time.monotonic() + args.timeout
     last_cmd_id: Optional[str] = None
     output_seen = False
-    more_sent = False
     done_seen = False
+    last_more_at = 0.0
 
     while time.monotonic() < deadline:
         remaining = max(0.0, deadline - time.monotonic())
         try:
             text = listener.messages.get(timeout=min(1.0, remaining))
         except queue.Empty:
-            if last_cmd_id and not done_seen and not more_sent:
-                if time.monotonic() - (deadline - args.timeout) >= args.more_delay:
+            if last_cmd_id and not done_seen:
+                if time.monotonic() - last_more_at >= args.more_delay:
                     interface.sendText(f"more {last_cmd_id}", channelIndex=args.channel)
-                    more_sent = True
+                    last_more_at = time.monotonic()
             continue
 
         print(f"\n[TEXT]\n{text}\n", flush=True)
