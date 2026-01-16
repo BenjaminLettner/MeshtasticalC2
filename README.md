@@ -30,6 +30,16 @@ python webui/app.py
 ```
 Open http://localhost:5050
 
+### Run Web UI permanently (launchd)
+```bash
+cp webui/meshtasticalc2.webui.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/meshtasticalc2.webui.plist
+```
+Stop it with:
+```bash
+launchctl unload ~/Library/LaunchAgents/meshtasticalc2.webui.plist
+```
+
 ## Notes
 - Replies are chunked to fit Meshtastic message limits.
 - Use `more <MSG-ID>` to fetch additional output.

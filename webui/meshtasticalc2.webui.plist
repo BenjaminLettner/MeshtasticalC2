@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.meshtasticalc2.webui</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>/Users/benjaminlettner/CascadeProjects/MeshC2/MeshtasticalC2/webui/run_webui.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>MINIC2_WEBUI_PORT</key>
+      <string>5050</string>
+      <key>MINIC2_CLIENT_PORT</key>
+      <string>/dev/cu.usbmodem1101</string>
+      <key>MINIC2_CLIENT_CHANNEL</key>
+      <string>1</string>
+      <key>MINIC2_CLIENT_TIMEOUT</key>
+      <string>60</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/benjaminlettner/Library/Logs/meshtasticalc2-webui.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/benjaminlettner/Library/Logs/meshtasticalc2-webui.err</string>
+  </dict>
+</plist>

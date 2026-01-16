@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${MINIC2_PYTHON_BIN:-/Users/benjaminlettner/meshtastic_venv/bin/python}"
+
+MINIC2_WEBUI_PORT="${MINIC2_WEBUI_PORT:-5050}"
+MINIC2_CLIENT_PORT="${MINIC2_CLIENT_PORT:-/dev/cu.usbmodem1101}"
+MINIC2_CLIENT_CHANNEL="${MINIC2_CLIENT_CHANNEL:-1}"
+MINIC2_CLIENT_TIMEOUT="${MINIC2_CLIENT_TIMEOUT:-60}"
+
+export MINIC2_WEBUI_PORT MINIC2_CLIENT_PORT MINIC2_CLIENT_CHANNEL MINIC2_CLIENT_TIMEOUT
+
+"${PYTHON_BIN}" "${ROOT_DIR}/webui/app.py"
