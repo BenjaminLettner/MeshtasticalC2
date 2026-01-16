@@ -132,6 +132,14 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
                     output_text = "\n".join(output_lines[:-1]).rstrip()
                 if output_text:
                     outputs.append(output_text)
+            elif text.startswith("MSG-ID:") and "Cmd received" not in text:
+                lines = text.splitlines()[1:]
+                if lines and lines[-1].strip() == "Done":
+                    lines = lines[:-1]
+                output_text = "\n".join(lines).strip()
+                if output_text:
+                    output_seen = True
+                    outputs.append(output_text)
 
             if "No more output" in text:
                 break
