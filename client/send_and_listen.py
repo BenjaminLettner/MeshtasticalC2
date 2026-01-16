@@ -54,6 +54,7 @@ def main() -> int:
     last_cmd_id: Optional[str] = None
     output_seen = False
     more_sent = False
+    done_seen = False
 
     while time.monotonic() < deadline:
         remaining = max(0.0, deadline - time.monotonic())
@@ -70,10 +71,17 @@ def main() -> int:
         if text.startswith("MSG-ID:"):
             first_line = text.splitlines()[0]
             last_cmd_id = first_line.replace("MSG-ID:", "").strip()
+            if "\nDone" in text:
+                done_seen = True
         if "Output:" in text:
             output_seen = True
+        if done_seen:
+            break
     if not output_seen:
-        print(f"[client] timeout after {args.timeout}s; no Output received", flush=True)
+        if done_seen:
+            print("[client] completed without Output", flush=True)
+        else:
+            print(f"[client] timeout after {args.timeout}s; no Output received", flush=True)
     interface.close()
     return 0 if output_seen else 1
 
