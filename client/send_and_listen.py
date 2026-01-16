@@ -47,11 +47,18 @@ def main() -> int:
         wait_for_config = getattr(interface, "waitForConfig", None)
         if callable(wait_for_config):
             wait_for_config()
+    while not listener.messages.empty():
+        try:
+            listener.messages.get_nowait()
+        except queue.Empty:
+            break
+
     print(f"[client] sending: {args.command}", flush=True)
     interface.sendText(args.command, channelIndex=args.channel)
 
     deadline = time.monotonic() + args.timeout
     last_cmd_id: Optional[str] = None
+    active_cmd_id: Optional[str] = None
     output_seen = False
     done_seen = False
     ack_seen = False
@@ -78,7 +85,12 @@ def main() -> int:
         print(f"\n[TEXT]\n{text}\n", flush=True)
         if text.startswith("MSG-ID:"):
             first_line = text.splitlines()[0]
-            last_cmd_id = first_line.replace("MSG-ID:", "").strip()
+            msg_id = first_line.replace("MSG-ID:", "").strip()
+            if active_cmd_id is None:
+                active_cmd_id = msg_id
+            if msg_id != active_cmd_id:
+                continue
+            last_cmd_id = msg_id
             if "\nDone" in text:
                 done_seen = True
         if "Cmd received" in text:
