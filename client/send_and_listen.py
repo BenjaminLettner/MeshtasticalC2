@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MeshtasticalC2 client send+listen")
     parser.add_argument("--port", required=True)
     parser.add_argument("--channel", type=int, default=1)
-    parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--command", required=True)
     parser.add_argument("--more-delay", type=int, default=1)
     parser.add_argument("--wait-config", action="store_true")
