@@ -12,7 +12,7 @@ from typing import Deque, Dict, List, Optional, Tuple
 import meshtastic.serial_interface
 from pubsub import pub
 
-MAX_MESSAGE_LEN = 200
+MAX_MESSAGE_LEN = int(os.getenv("MESH_MAX_MESSAGE_LEN", "180"))
 ACK_TEMPLATE = "MSG-ID:{cmd_id}\nHost:{host}\nCmd received: {command}"
 OUTPUT_PREFIX = "MSG-ID:{cmd_id}\nCHUNK:{index}/{total}\nOutput:\n"
 OUTPUT_SUFFIX = ""
