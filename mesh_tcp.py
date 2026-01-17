@@ -58,7 +58,7 @@ def send_and_listen(
         max_more_attempts = 200
         next_index = 0
         awaiting_chunk = False
-        retry_delay = max(1.0, float(more_delay))
+        retry_delay = max(5.0, float(more_delay))
 
         while time.monotonic() < deadline:
             remaining = max(0.0, deadline - time.monotonic())
@@ -74,7 +74,7 @@ def send_and_listen(
                             )
                             if on_message:
                                 on_message(
-                                    f"[controller] request chunk idx={next_index} (attempt {more_attempts + 1})"
+                                    f"[controller] request chunk idx={next_index} (attempt {more_attempts + 1}, delay {retry_delay:.0f}s)"
                                 )
                             last_more_at = time.monotonic()
                             more_attempts += 1
