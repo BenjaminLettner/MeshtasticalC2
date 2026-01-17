@@ -108,7 +108,7 @@ def main() -> int:
     ack_seen = False
     last_more_at = 0.0
     more_attempts = 0
-    max_more_attempts = 1
+    max_more_attempts = 200
     next_index = 0
     awaiting_chunk = False
 
@@ -156,8 +156,8 @@ def main() -> int:
                 if index is not None:
                     output_seen = True
                     awaiting_chunk = False
-                    if index >= next_index:
-                        next_index = index + 1
+                    if index == next_index:
+                        next_index += 1
             elif "Output:" in text or ("Cmd received" not in text and len(lines) > 1):
                 output_seen = True
                 awaiting_chunk = False

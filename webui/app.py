@@ -165,8 +165,8 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
                 if index is not None:
                     output_seen = True
                     awaiting_chunk = False
-                    if index >= next_index:
-                        next_index = index + 1
+                    if index == next_index:
+                        next_index += 1
 
             if "Output:" in text:
                 output_seen = True
