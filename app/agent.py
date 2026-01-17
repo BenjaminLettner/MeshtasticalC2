@@ -217,8 +217,6 @@ class AgentService:
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
             self._send_text(ack, destination_id=destination_id)
             time.sleep(0.1)
-            first_chunk = chunks[0]
-            self._send_text_repeated(first_chunk, destination_id=destination_id)
             self.output_buffer.store(cmd_id, chunks)
 
     def _run_command(self, command: str, cwd: Optional[str] = None) -> Tuple[str, str, int]:
