@@ -119,7 +119,7 @@ def main() -> int:
         except queue.Empty:
             if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
                 if time.monotonic() - last_more_at >= args.more_delay:
-                    if (output_seen or ack_seen) and not awaiting_chunk:
+                    if output_seen or ack_seen:
                         interface.sendText(
                             f"more {last_cmd_id} {next_index}",
                             channelIndex=args.channel,
