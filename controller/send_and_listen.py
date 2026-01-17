@@ -111,6 +111,7 @@ def main() -> int:
     max_more_attempts = 200
     next_index = 0
     awaiting_chunk = False
+    retry_delay = max(1.0, float(args.more_delay))
 
     while time.monotonic() < deadline:
         remaining = max(0.0, deadline - time.monotonic())
@@ -118,7 +119,7 @@ def main() -> int:
             text = listener.messages.get(timeout=min(1.0, remaining))
         except queue.Empty:
             if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
-                if time.monotonic() - last_more_at >= args.more_delay:
+                if time.monotonic() - last_more_at >= retry_delay:
                     if output_seen or ack_seen:
                         interface.sendText(
                             f"more {last_cmd_id} {next_index}",
@@ -131,6 +132,7 @@ def main() -> int:
                         last_more_at = time.monotonic()
                         more_attempts += 1
                         awaiting_chunk = True
+                        retry_delay = min(retry_delay * 1.8, 60.0)
             continue
 
         if text.strip().startswith("more "):
