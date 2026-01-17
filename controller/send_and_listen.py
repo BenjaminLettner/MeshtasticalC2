@@ -1,33 +1,20 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import queue
 import re
 import sys
 import time
-from typing import List, Optional
+from pathlib import Path
+from typing import List
 
-import meshtastic.serial_interface
-from pubsub import pub
 from serial.tools import list_ports
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from mesh_tcp import send_and_listen
 
 
 PORT_PATTERN = re.compile(r"usbmodem|usbserial|ttyACM|ttyUSB", re.IGNORECASE)
-
-
-class Listener:
-    def __init__(self) -> None:
-        self.messages = queue.Queue()
-
-    def on_receive(self, packet, interface) -> None:
-        decoded = packet.get("decoded", {})
-        if decoded.get("portnum") != "TEXT_MESSAGE_APP":
-            return
-        text = decoded.get("text")
-        if not text and "payload" in decoded:
-            text = decoded["payload"].decode("utf-8", errors="ignore")
-        if text:
-            self.messages.put(text)
 
 
 def parse_args() -> argparse.Namespace:
@@ -80,104 +67,32 @@ def _resolve_port(args: argparse.Namespace) -> str:
 
 def main() -> int:
     args = parse_args()
-    listener = Listener()
-    pub.subscribe(listener.on_receive, "meshtastic.receive")
-    pub.subscribe(listener.on_receive, "meshtastic.receive.text")
-
     port = _resolve_port(args)
     print(f"[controller] connecting to {port}...", flush=True)
-    interface = meshtastic.serial_interface.SerialInterface(port)
-    if args.wait_config:
-        wait_for_config = getattr(interface, "waitForConfig", None)
-        if callable(wait_for_config):
-            wait_for_config()
-    while not listener.messages.empty():
-        try:
-            listener.messages.get_nowait()
-        except queue.Empty:
-            break
 
-    print(f"[controller] sending: {args.command}", flush=True)
-    interface.sendText(args.command, channelIndex=args.channel)
-
-    deadline = time.monotonic() + args.timeout
-    last_cmd_id: Optional[str] = None
-    active_cmd_id: Optional[str] = None
-    output_seen = False
-    done_seen = False
-    ack_seen = False
-    last_more_at = 0.0
-    more_attempts = 0
-    max_more_attempts = 200
-    next_index = 0
-    awaiting_chunk = False
-    retry_delay = max(1.0, float(args.more_delay))
-
-    while time.monotonic() < deadline:
-        remaining = max(0.0, deadline - time.monotonic())
-        try:
-            text = listener.messages.get(timeout=min(1.0, remaining))
-        except queue.Empty:
-            if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
-                if time.monotonic() - last_more_at >= retry_delay:
-                    if output_seen or ack_seen:
-                        interface.sendText(
-                            f"more {last_cmd_id} {next_index}",
-                            channelIndex=args.channel,
-                        )
-                        print(
-                            f"[controller] request chunk idx={next_index} (attempt {more_attempts + 1})",
-                            flush=True,
-                        )
-                        last_more_at = time.monotonic()
-                        more_attempts += 1
-                        awaiting_chunk = True
-                        retry_delay = min(retry_delay * 1.8, 60.0)
-            continue
-
-        if text.strip().startswith("more "):
-            continue
-
-        print(f"\n[TEXT]\n{text}\n", flush=True)
-        msg_id: Optional[str] = None
-        if text.startswith("MSG-ID:"):
-            first_line = text.splitlines()[0]
-            msg_id = first_line.replace("MSG-ID:", "").strip()
-            if "\nDone" in text:
-                done_seen = True
-        if "Cmd received" in text and msg_id:
-            ack_seen = True
-            active_cmd_id = msg_id
-            last_cmd_id = msg_id
-        if active_cmd_id and msg_id and msg_id != active_cmd_id:
-            print(f"[controller] ignoring stale MSG-ID {msg_id}", flush=True)
-            continue
-        if text.startswith("MSG-ID:"):
-            lines = text.splitlines()
-            chunk_line = next((line for line in lines if line.startswith("CHUNK:")), None)
-            if chunk_line:
-                try:
-                    index = int(chunk_line.split(":", 1)[1].split("/", 1)[0])
-                except (ValueError, IndexError):
-                    index = None
-                if index is not None:
-                    output_seen = True
-                    awaiting_chunk = False
-                    print(f"[controller] received chunk idx={index}", flush=True)
-                    if index == next_index:
-                        next_index += 1
-            elif "Output:" in text or ("Cmd received" not in text and len(lines) > 1):
-                output_seen = True
-                awaiting_chunk = False
-        if done_seen:
-            break
-    if not output_seen:
-        if done_seen:
-            print("[controller] completed without Output", flush=True)
+    def handle_message(message: str) -> None:
+        if message.startswith("[controller]"):
+            print(message, flush=True)
         else:
-            print(f"[controller] max wait {args.timeout}s reached; no Output received", flush=True)
-    interface.close()
-    return 0 if output_seen else 1
+            print(f"\n[TEXT]\n{message}\n", flush=True)
+
+    result = send_and_listen(
+        command=args.command,
+        port=port,
+        channel=args.channel,
+        timeout=args.timeout,
+        more_delay=args.more_delay,
+        wait_config=args.wait_config,
+        on_message=handle_message,
+    )
+
+    if not result["received"]:
+        print(f"[controller] max wait {args.timeout}s reached; no Output received", flush=True)
+        return 1
+    if not result["output"]:
+        print("[controller] completed without Output", flush=True)
+        return 0
+    return 0
 
 
 if __name__ == "__main__":
