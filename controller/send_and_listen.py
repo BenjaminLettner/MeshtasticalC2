@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import queue
+import re
 import sys
 import time
-from typing import Optional
+from typing import List, Optional
 
 import meshtastic.serial_interface
 from pubsub import pub
+from serial.tools import list_ports
+
+
+PORT_PATTERN = re.compile(r"usbmodem|usbserial|ttyACM|ttyUSB", re.IGNORECASE)
 
 
 class Listener:
@@ -26,13 +32,50 @@ class Listener:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MeshtasticalC2 controller send+listen")
-    parser.add_argument("--port", required=True)
+    parser.add_argument("--port")
     parser.add_argument("--channel", type=int, default=1)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--command", required=True)
     parser.add_argument("--more-delay", type=int, default=1)
     parser.add_argument("--wait-config", action="store_true")
+    parser.add_argument(
+        "--port-wait",
+        type=int,
+        default=30,
+        help="Seconds to wait for a Meshtastic device if no port is provided",
+    )
     return parser.parse_args()
+
+
+def _list_candidate_ports() -> List[str]:
+    ports = [port.device for port in list_ports.comports()]
+    if not ports:
+        return []
+    preferred = [port for port in ports if PORT_PATTERN.search(port)]
+    return preferred or ports
+
+
+def _resolve_port(args: argparse.Namespace) -> str:
+    if args.port:
+        return args.port
+    env_port = os.getenv("MESH_PORT") or os.getenv("MESHTASTIC_PORT")
+    if env_port:
+        return env_port
+
+    deadline = time.monotonic() + max(0, args.port_wait)
+    delay = 1.0
+    while True:
+        candidates = _list_candidate_ports()
+        if candidates:
+            return candidates[0]
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(delay)
+        delay = min(10.0, delay * 1.5)
+
+    raise RuntimeError(
+        "No serial devices detected. Provide --port or attach a Meshtastic device."
+    )
 
 
 def main() -> int:
@@ -41,8 +84,9 @@ def main() -> int:
     pub.subscribe(listener.on_receive, "meshtastic.receive")
     pub.subscribe(listener.on_receive, "meshtastic.receive.text")
 
-    print(f"[controller] connecting to {args.port}...", flush=True)
-    interface = meshtastic.serial_interface.SerialInterface(args.port)
+    port = _resolve_port(args)
+    print(f"[controller] connecting to {port}...", flush=True)
+    interface = meshtastic.serial_interface.SerialInterface(port)
     if args.wait_config:
         wait_for_config = getattr(interface, "waitForConfig", None)
         if callable(wait_for_config):
