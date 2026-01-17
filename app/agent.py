@@ -108,6 +108,7 @@ class AgentService:
             except ValueError:
                 index = 0
             destination_id = packet.get("fromId")
+            self.logger.info("Paging request: cmd=%s idx=%s from=%s", cmd_id, index, destination_id)
             self._handle_more(cmd_id, destination_id, index)
             return
 
@@ -160,10 +161,12 @@ class AgentService:
     def _handle_more(self, cmd_id: str, destination_id: Optional[str], index: int) -> None:
         chunk, total = self.output_buffer.get(cmd_id, index)
         if not chunk:
+            self.logger.info("No chunk available: cmd=%s idx=%s total=%s", cmd_id, index, total)
             self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
             if total == 0 or index >= max(total - 1, 0):
                 self.output_buffer.finalize(cmd_id)
             return
+        self.logger.info("Sending chunk: cmd=%s idx=%s total=%s", cmd_id, index, total)
         self._send_text(chunk, destination_id=destination_id)
         if total and index >= total - 1:
             self.output_buffer.finalize(cmd_id)
@@ -214,8 +217,6 @@ class AgentService:
             ack = ACK_TEMPLATE.format(cmd_id=cmd_id, host=self.host, command=command)
             self._send_text(ack, destination_id=destination_id)
             time.sleep(0.1)
-            first_chunk = chunks[0]
-            self._send_text_repeated(first_chunk, destination_id=destination_id)
             self.output_buffer.store(cmd_id, chunks)
 
     def _run_command(self, command: str, cwd: Optional[str] = None) -> Tuple[str, str, int]:

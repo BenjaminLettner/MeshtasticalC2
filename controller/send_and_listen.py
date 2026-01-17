@@ -124,6 +124,10 @@ def main() -> int:
                             f"more {last_cmd_id} {next_index}",
                             channelIndex=args.channel,
                         )
+                        print(
+                            f"[controller] request chunk idx={next_index} (attempt {more_attempts + 1})",
+                            flush=True,
+                        )
                         last_more_at = time.monotonic()
                         more_attempts += 1
                         awaiting_chunk = True
@@ -144,6 +148,7 @@ def main() -> int:
             active_cmd_id = msg_id
             last_cmd_id = msg_id
         if active_cmd_id and msg_id and msg_id != active_cmd_id:
+            print(f"[controller] ignoring stale MSG-ID {msg_id}", flush=True)
             continue
         if text.startswith("MSG-ID:"):
             lines = text.splitlines()
@@ -156,6 +161,7 @@ def main() -> int:
                 if index is not None:
                     output_seen = True
                     awaiting_chunk = False
+                    print(f"[controller] received chunk idx={index}", flush=True)
                     if index == next_index:
                         next_index += 1
             elif "Output:" in text or ("Cmd received" not in text and len(lines) > 1):
