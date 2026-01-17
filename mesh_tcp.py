@@ -98,10 +98,19 @@ def send_and_listen(
 
             if "Cmd received" in text and msg_id:
                 ack_seen = True
-                active_cmd_id = msg_id
-                last_cmd_id = msg_id
+                if active_cmd_id != msg_id:
+                    active_cmd_id = msg_id
+                    last_cmd_id = msg_id
+                    next_index = 0
+                    output_seen = False
+                    done_seen = False
+                    retry_delay = max(5.0, float(more_delay))
+                    if on_message:
+                        on_message(f"[controller] tracking cmd {msg_id}")
 
             if active_cmd_id and msg_id and msg_id != active_cmd_id:
+                continue
+            if active_cmd_id is None and msg_id and "Cmd received" not in text:
                 continue
 
             lines = text.splitlines()
