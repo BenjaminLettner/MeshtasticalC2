@@ -133,18 +133,18 @@ def main() -> int:
             continue
 
         print(f"\n[TEXT]\n{text}\n", flush=True)
+        msg_id: Optional[str] = None
         if text.startswith("MSG-ID:"):
             first_line = text.splitlines()[0]
             msg_id = first_line.replace("MSG-ID:", "").strip()
-            if active_cmd_id is None:
-                active_cmd_id = msg_id
-            if msg_id != active_cmd_id:
-                continue
-            last_cmd_id = msg_id
             if "\nDone" in text:
                 done_seen = True
-        if "Cmd received" in text:
+        if "Cmd received" in text and msg_id:
             ack_seen = True
+            active_cmd_id = msg_id
+            last_cmd_id = msg_id
+        if active_cmd_id and msg_id and msg_id != active_cmd_id:
+            continue
         if text.startswith("MSG-ID:"):
             lines = text.splitlines()
             chunk_line = next((line for line in lines if line.startswith("CHUNK:")), None)
