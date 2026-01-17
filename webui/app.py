@@ -120,18 +120,29 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
         outputs: List[str] = []
         raw_messages: List[str] = []
         output_seen = False
-        more_sent = False
+        ack_seen = False
         done_seen = False
+        last_more_at = 0.0
+        more_attempts = 0
+        max_more_attempts = 200
+        next_index = 0
+        awaiting_chunk = False
 
         while time.monotonic() < deadline:
             remaining = max(0.0, deadline - time.monotonic())
             try:
                 text = listener.messages.get(timeout=min(1.0, remaining))
             except queue.Empty:
-                if last_cmd_id and not done_seen and not more_sent:
-                    if time.monotonic() - start >= MORE_DELAY:
-                        interface.sendText(f"more {last_cmd_id}", channelIndex=channel)
-                        more_sent = True
+                if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
+                    if time.monotonic() - last_more_at >= MORE_DELAY:
+                        if (output_seen or ack_seen) and not awaiting_chunk:
+                            interface.sendText(
+                                f"more {last_cmd_id} {next_index}",
+                                channelIndex=channel,
+                            )
+                            last_more_at = time.monotonic()
+                            more_attempts += 1
+                            awaiting_chunk = True
                 continue
 
             raw_messages.append(text)
@@ -141,8 +152,25 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
                 if "\nDone" in text or text.rstrip().endswith("Done"):
                     done_seen = True
 
+            if "Cmd received" in text:
+                ack_seen = True
+
+            lines = text.splitlines()
+            chunk_line = next((line for line in lines if line.startswith("CHUNK:")), None)
+            if chunk_line:
+                try:
+                    index = int(chunk_line.split(":", 1)[1].split("/", 1)[0])
+                except (ValueError, IndexError):
+                    index = None
+                if index is not None:
+                    output_seen = True
+                    awaiting_chunk = False
+                    if index >= next_index:
+                        next_index = index + 1
+
             if "Output:" in text:
                 output_seen = True
+                awaiting_chunk = False
                 output_text = text.split("Output:", 1)[1].lstrip()
                 output_lines = output_text.splitlines()
                 if output_lines and output_lines[-1].strip() == "Done":
@@ -156,6 +184,7 @@ def _send_and_listen(command: str, port: str, channel: int, timeout: int) -> dic
                 output_text = "\n".join(lines).strip()
                 if output_text:
                     output_seen = True
+                    awaiting_chunk = False
                     outputs.append(output_text)
 
             if "No more output" in text:

@@ -109,6 +109,8 @@ def main() -> int:
     last_more_at = 0.0
     more_attempts = 0
     max_more_attempts = 1
+    next_index = 0
+    awaiting_chunk = False
 
     while time.monotonic() < deadline:
         remaining = max(0.0, deadline - time.monotonic())
@@ -117,10 +119,14 @@ def main() -> int:
         except queue.Empty:
             if last_cmd_id and not done_seen and more_attempts < max_more_attempts:
                 if time.monotonic() - last_more_at >= args.more_delay:
-                    if output_seen or ack_seen:
-                        interface.sendText(f"more {last_cmd_id}", channelIndex=args.channel)
+                    if (output_seen or ack_seen) and not awaiting_chunk:
+                        interface.sendText(
+                            f"more {last_cmd_id} {next_index}",
+                            channelIndex=args.channel,
+                        )
                         last_more_at = time.monotonic()
                         more_attempts += 1
+                        awaiting_chunk = True
             continue
 
         if text.strip().startswith("more "):
@@ -139,12 +145,22 @@ def main() -> int:
                 done_seen = True
         if "Cmd received" in text:
             ack_seen = True
-        if "Output:" in text:
-            output_seen = True
-        elif text.startswith("MSG-ID:") and "Cmd received" not in text:
+        if text.startswith("MSG-ID:"):
             lines = text.splitlines()
-            if len(lines) > 1:
+            chunk_line = next((line for line in lines if line.startswith("CHUNK:")), None)
+            if chunk_line:
+                try:
+                    index = int(chunk_line.split(":", 1)[1].split("/", 1)[0])
+                except (ValueError, IndexError):
+                    index = None
+                if index is not None:
+                    output_seen = True
+                    awaiting_chunk = False
+                    if index >= next_index:
+                        next_index = index + 1
+            elif "Output:" in text or ("Cmd received" not in text and len(lines) > 1):
                 output_seen = True
+                awaiting_chunk = False
         if done_seen:
             break
     if not output_seen:

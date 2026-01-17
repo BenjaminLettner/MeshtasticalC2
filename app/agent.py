@@ -7,36 +7,38 @@ import subprocess
 import threading
 import time
 from collections import deque
-from typing import Deque, Dict, Optional, Tuple
+from typing import Deque, Dict, List, Optional, Tuple
 
 import meshtastic.serial_interface
 from pubsub import pub
 
 MAX_MESSAGE_LEN = 200
 ACK_TEMPLATE = "MSG-ID:{cmd_id}\nHost:{host}\nCmd received: {command}"
-OUTPUT_PREFIX = "MSG-ID:{cmd_id}\nOutput:\n"
+OUTPUT_PREFIX = "MSG-ID:{cmd_id}\nCHUNK:{index}/{total}\nOutput:\n"
 OUTPUT_SUFFIX = ""
 
 
 class OutputBuffer:
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._buffers: Dict[str, Deque[str]] = {}
+        self._buffers: Dict[str, List[str]] = {}
 
-    def store(self, cmd_id: str, chunks: Deque[str]) -> None:
+    def store(self, cmd_id: str, chunks: List[str]) -> None:
         with self._lock:
             self._buffers[cmd_id] = chunks
 
-    def pop_next(self, cmd_id: str) -> Tuple[Optional[str], bool]:
+    def get(self, cmd_id: str, index: int) -> Tuple[Optional[str], int]:
         with self._lock:
             chunks = self._buffers.get(cmd_id)
             if not chunks:
-                return None, False
-            next_chunk = chunks.popleft()
-            is_last = not chunks
-            if is_last:
-                self._buffers.pop(cmd_id, None)
-            return next_chunk, is_last
+                return None, 0
+            if index < 0 or index >= len(chunks):
+                return None, len(chunks)
+            return chunks[index], len(chunks)
+
+    def finalize(self, cmd_id: str) -> None:
+        with self._lock:
+            self._buffers.pop(cmd_id, None)
 
 
 class AgentService:
@@ -99,9 +101,14 @@ class AgentService:
             return
 
         if text.startswith("more "):
-            cmd_id = text.split(" ", 1)[1].strip()
+            parts = text.split()
+            cmd_id = parts[1].strip() if len(parts) > 1 else ""
+            try:
+                index = int(parts[2]) if len(parts) > 2 else 0
+            except ValueError:
+                index = 0
             destination_id = packet.get("fromId")
-            self._handle_more(cmd_id, destination_id)
+            self._handle_more(cmd_id, destination_id, index)
             return
 
         self.logger.info("Received command: %s", text)
@@ -150,12 +157,16 @@ class AgentService:
 
         return None
 
-    def _handle_more(self, cmd_id: str, destination_id: Optional[str]) -> None:
-        chunk, _ = self.output_buffer.pop_next(cmd_id)
+    def _handle_more(self, cmd_id: str, destination_id: Optional[str], index: int) -> None:
+        chunk, total = self.output_buffer.get(cmd_id, index)
         if not chunk:
             self._send_text(f"MSG-ID:{cmd_id}\nDone", destination_id=destination_id)
+            if total == 0 or index >= max(total - 1, 0):
+                self.output_buffer.finalize(cmd_id)
             return
         self._send_text(chunk, destination_id=destination_id)
+        if total and index >= total - 1:
+            self.output_buffer.finalize(cmd_id)
 
     def _execute_and_respond(
         self,
@@ -229,7 +240,7 @@ class AgentService:
         cmd_id: str,
         result: Tuple[str, str, int],
         timing_line: str,
-    ) -> Deque[str]:
+    ) -> List[str]:
         stdout, stderr, exit_code = result
         combined = stdout
         if stderr:
@@ -240,29 +251,31 @@ class AgentService:
 
         combined = f"{combined}\n{timing_line}\nDone"
 
-        prefix = OUTPUT_PREFIX.format(cmd_id=cmd_id)
         max_payload = MAX_MESSAGE_LEN
 
-        first_limit = max_payload - len(prefix)
-        if first_limit <= 0:
-            return deque([f"MSG-ID:{cmd_id}\nOutput too long"])
+        def build_chunks(total_guess: int) -> List[str]:
+            chunks_local: List[str] = []
+            remaining = combined
+            index = 0
+            while remaining:
+                if index == 0:
+                    header = OUTPUT_PREFIX.format(cmd_id=cmd_id, index=index, total=total_guess)
+                else:
+                    header = f"MSG-ID:{cmd_id}\nCHUNK:{index}/{total_guess}\n"
+                available = max_payload - len(header)
+                if available <= 0:
+                    return [f"MSG-ID:{cmd_id}\nOutput too long"]
+                chunk_body = remaining[:available]
+                remaining = remaining[available:]
+                chunks_local.append(header + chunk_body)
+                index += 1
+            return chunks_local
 
-        chunks = deque()
-        remaining = combined
-        first = True
-        while remaining:
-            if first:
-                chunk_body = remaining[:first_limit]
-                remaining = remaining[first_limit:]
-                chunk = prefix + chunk_body
-                chunks.append(chunk)
-                first = False
-            else:
-                next_limit = max_payload
-                chunk_body = remaining[:next_limit]
-                remaining = remaining[next_limit:]
-                chunk = f"MSG-ID:{cmd_id}\n{chunk_body}"
-                chunks.append(chunk)
+        total_guess = 1
+        chunks = build_chunks(total_guess)
+        while len(chunks) != total_guess:
+            total_guess = len(chunks)
+            chunks = build_chunks(total_guess)
 
         return chunks
 

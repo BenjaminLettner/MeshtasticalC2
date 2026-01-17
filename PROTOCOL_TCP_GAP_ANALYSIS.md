@@ -93,6 +93,18 @@ CRC=<hash>
 PAYLOAD=<...>
 ```
 
+## Compact Header Guidance (200-byte Limit)
+
+Because the radio payload is capped at ~200 bytes, the header must be compact.
+We will use a **binary-only** header to maximize payload space.
+
+**Principles:**
+- Fixed-size binary header (10–16 bytes).
+- Short session identifiers (2–4 bytes, mapped after handshake).
+- Base protocol fields only; optional fields gated by flags.
+
+**Estimated header length (binary):** ~12–16 bytes, leaving ~184–188 bytes for payload.
+
 ## Immediate Gaps in Current Code
 
 - Controller waits for only **one** `more` request and does not do sequential paging (CLI & Web UI). (`controller/send_and_listen.py`, `webui/app.py`)
@@ -102,17 +114,42 @@ PAYLOAD=<...>
 ## Implementation Phases (Suggested)
 
 1. **Phase 1 — Deterministic chunk paging**
-   - Offset/indexed `more` requests and chunk_index/total.
-   - ACK for each chunk (or at least every N).
+   - **Define chunk headers**: add `CHUNK=<index>/<total>` and `CMD_ID=<id>` to every output fragment.
+   - **Controller requests by index**: `more <cmd_id> <index>` (or `DATA-REQ`) with explicit chunk index.
+   - **Agent responds with matching index**: send the chunk only if it matches the requested index.
+   - **ACK handshake per chunk**: controller sends `ACK <cmd_id> <index>` after receiving each chunk.
+   - **Retry policy v1**: if no chunk arrives within `T` seconds, controller repeats the request (max N).
+   - **Acceptance criteria**:
+     - Large output delivers all chunks in order.
+     - Controller never advances index without receipt of the prior chunk.
+     - Agent can re-send a specific chunk on demand.
 
 2. **Phase 2 — Reliable retransmission**
-   - Per-chunk timers, retries, and duplicate detection.
+   - **Per-chunk timers**: controller starts a timer when requesting chunk `i`.
+   - **Retransmission backoff**: exponential backoff for each missed chunk (cap at max delay).
+   - **Duplicate detection**: controller discards duplicate `(cmd_id, index)` chunks.
+   - **Agent resend cache**: keep a rolling cache of recent chunks per command to satisfy retransmits.
+   - **NAK support**: controller can send `NAK <cmd_id> <missing_indices>` to request multiple chunks.
+   - **Acceptance criteria**:
+     - Dropped chunks are recovered without restarting the command.
+     - Duplicate chunks do not duplicate output on the controller.
 
 3. **Phase 3 — Flow + congestion control**
-   - Receiver window + sender pacing.
+   - **Receiver window**: controller advertises `WINDOW=<n>` allowing up to `n` in-flight chunks.
+   - **Sender pacing**: agent enforces a minimum inter-chunk delay and respects WINDOW.
+   - **Adaptive pacing**: reduce send rate after repeated timeouts/NAKs.
+   - **Acceptance criteria**:
+     - Long outputs do not overwhelm the LoRa link.
+     - Controller can throttle/slow the agent without losing state.
 
 4. **Phase 4 — Session management + integrity**
-   - Session handshake, CRC, and replay protection.
+   - **Session handshake**: `SYN` → `SYN-ACK` → `ACK` to establish `SESSION=<uuid>`.
+   - **Session-bound seq**: all messages include `SESSION` and `SEQ` for ordering.
+   - **Integrity checks**: add `CRC=<hash>` to every payload.
+   - **Replay protection**: reject old `SEQ` or invalid `SESSION` values.
+   - **Acceptance criteria**:
+     - Controller can reconnect and resume only with a valid session.
+     - Corrupted or replayed frames are rejected.
 
 ---
 
